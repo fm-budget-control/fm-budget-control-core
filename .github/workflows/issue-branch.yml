@@ -1,0 +1,126 @@
+name: Issue Branch
+
+run-name: "Issue Branch — #${{ github.event.issue.number }} — ${{ github.event.issue.title }}"
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened # Covers the case where an issue is closed and re-opened
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false # Never cancel — each issue gets exactly one branch
+
+permissions:
+  contents: write # Create branches
+  issues: write   # Post comment + assign issue
+
+jobs:
+  create-branch:
+    name: Create Branch from Issue
+    runs-on: ubuntu-latest
+    # Skip bot-created issues (e.g. Dependabot) — they manage their own branches.
+    if: github.event.issue.user.type != 'Bot'
+    steps:
+      - name: Fetch issue type via GraphQL
+        id: issue_type
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TYPE=$(gh api graphql -f query='
+            query($nodeId: ID!) {
+              node(id: $nodeId) {
+                ... on Issue {
+                  issueType {
+                    name
+                  }
+                }
+              }
+            }
+          ' -f nodeId="${{ github.event.issue.node_id }}" \
+            --jq '.data.node.issueType.name // "Feature"')
+
+          echo "name=${TYPE}" >> $GITHUB_OUTPUT
+
+      - name: Resolve branch prefix from issue type
+        id: prefix
+        run: |
+          case "${{ steps.issue_type.outputs.name }}" in
+            "Bug")     echo "value=fix"   >> $GITHUB_OUTPUT ;;
+            "Task")    echo "value=chore" >> $GITHUB_OUTPUT ;;
+            "Chore")   echo "value=chore" >> $GITHUB_OUTPUT ;;
+            *)         echo "value=feat"  >> $GITHUB_OUTPUT ;;
+            # Feature, unknown types, and unset all default to feat/
+          esac
+
+      - name: Slugify issue title
+        id: slug
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }} # Passed as env var — never inline — to prevent script injection
+        run: |
+          SLUG=$(echo "$ISSUE_TITLE" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9]/-/g' \
+            | sed 's/-\+/-/g' \
+            | sed 's/^-//;s/-$//' \
+            | cut -c1-50)
+          echo "value=${SLUG}" >> $GITHUB_OUTPUT
+
+      - name: Compose branch name
+        id: branch
+        run: |
+          NAME="${{ steps.prefix.outputs.value }}/${{ github.event.issue.number }}-${{ steps.slug.outputs.value }}"
+          echo "name=${NAME}" >> $GITHUB_OUTPUT
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main # Always branch from main explicitly — immune to default branch changes
+
+      - name: Create branch from main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
+        run: |
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" &>/dev/null; then
+            echo "Branch '$BRANCH_NAME' already exists on remote — skipping creation."
+          else
+            git checkout -b "$BRANCH_NAME"
+            git push origin "$BRANCH_NAME"
+            echo "Branch '$BRANCH_NAME' created."
+          fi
+
+      - name: Assign issue to opener
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit "${{ github.event.issue.number }}" \
+            --add-assignee "${{ github.event.issue.user.login }}"
+
+      - name: Post comment on issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
+          ISSUE_TYPE: ${{ steps.issue_type.outputs.name }}
+        run: |
+          NUMBER="${{ github.event.issue.number }}"
+
+          gh issue comment "$NUMBER" --body "### 🌿 Branch created
+
+          A branch has been automatically created for this issue and assigned to you.
+
+          | | |
+          |---|---|
+          | **Branch** | \`${BRANCH_NAME}\` |
+          | **Type** | ${ISSUE_TYPE} |
+          | **Base** | \`main\` |
+
+          **Get started locally:**
+          \`\`\`bash
+          ./scripts/start-issue.sh ${BRANCH_NAME}
+          \`\`\`
+
+          > Remember to use [Conventional Commits](https://www.conventionalcommits.org) when committing to this branch.
+          > Pre-flight will fire automatically on your first push.
+          > Opening a PR from this branch will automatically close #${NUMBER} on merge."

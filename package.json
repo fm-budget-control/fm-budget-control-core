@@ -1,6 +1,6 @@
 {
   "name": "@fm-budget-control/fm-budget-control-core",
-  "version": "0.0.0-development",
+  "version": "1.0.0",
   "description": "Hexagonal architecture domain primitives for fm-budget-control",
   "license": "MIT",
   "type": "module",
@@ -11,6 +11,10 @@
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
     "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fm-budget-control/fm-budget-control-core"
   },
   "publishConfig": {
     "access": "public",

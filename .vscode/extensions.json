@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    // ── Required ──────────────────────────────────────────────────────────────
+    "dbaeumer.vscode-eslint",               // ESLint inline errors
+    "esbenp.prettier-vscode",               // Prettier format on save
+    "sonarsource.sonarlint-vscode",         // SonarCloud connected mode
+    "eamodio.gitlens",                      // Git blame, history, PR context
+    "github.vscode-github-actions",         // Workflow YAML validation
+    "vivaxy.vscode-conventional-commits",   // Conventional Commits commit UI
+ 
+    // ── Strongly recommended ──────────────────────────────────────────────────
+    "github.vscode-pull-request-github",   // PR management inside VS Code
+    "usernamehw.errorlens",                // Inline error messages at end of line
+    "yoavbls.pretty-ts-errors",            // Human-readable TypeScript errors
+    "pmneo.tsimporter",                    // Auto-import TypeScript symbols
+    "christian-kohler.path-intellisense",  // File path autocomplete
+    "mikestead.dotenv"                     // .env file syntax highlighting
+  ]
+}
+ 
