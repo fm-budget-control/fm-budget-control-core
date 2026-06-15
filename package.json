@@ -1,0 +1,33 @@
+{
+  "name": "@fm-budget-control/fm-budget-control-core",
+  "version": "0.0.0-development",
+  "description": "Hexagonal architecture domain primitives for fm-budget-control",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "prepare": "husky"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.3",
+    "@typescript-eslint/eslint-plugin": "^8.61.0",
+    "@typescript-eslint/parser": "^8.61.0",
+    "eslint": "^10.5.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true,
+    "fsevents@2.3.3": true
+  }
+}
