@@ -59,7 +59,7 @@ jobs:
           # ── npm authentication ────────────────────────────────────────────
           # STAGE A (bootstrap): uncomment NPM_TOKEN below for the very first
           # publish only, then revoke the token and delete this line.
-          # NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           #
           # STAGE B (permanent): npm Trusted Publishing via OIDC.
           # No token needed — the npm CLI authenticates automatically using
