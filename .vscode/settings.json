@@ -1,0 +1,46 @@
+{
+  // ── Formatting ─────────────────────────────────────────────────────────────
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+ 
+  // ── ESLint ─────────────────────────────────────────────────────────────────
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": ["typescript", "javascript"],
+ 
+  // ── TypeScript ─────────────────────────────────────────────────────────────
+  // Always use the project's own TypeScript version, not VS Code's bundled one.
+  // This ensures editor errors match tsc and CI exactly.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTyepescript": true,
+ 
+  // ── File explorer ──────────────────────────────────────────────────────────
+  "files.exclude": {
+    "node_modules": true,
+    "dist": true,
+    "coverage": true
+  },
+  "search.exclude": {
+    "node_modules": true,
+    "dist": true,
+    "coverage": true
+  },
+ 
+  // ── Terminal ───────────────────────────────────────────────────────────────
+  // Ensures nvm is available in the VS Code integrated terminal on macOS.
+  "terminal.integrated.env.osx": {
+    "NVM_DIR": "${env:HOME}/.nvm"
+  },
+ 
+  // ── Git ────────────────────────────────────────────────────────────────────
+  "git.autofetch": true,
+  "git.confirmSync": false,
+ 
+  // ── Editor comfort ─────────────────────────────────────────────────────────
+  "editor.rulers": [100],
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true
+}
