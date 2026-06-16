@@ -62,8 +62,8 @@ jobs:
             const issueTypeName = (issue.issueType?.name || "").toLowerCase().trim();
 
             const typeMap = {
-              feature: "feature",
-              fix: "fix",
+              feature: "feat",
+              bug: "fix",
               task: "chore",
               chore: "chore",
               hotfix: "hotfix",
