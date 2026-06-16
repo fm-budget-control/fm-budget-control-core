@@ -21,6 +21,7 @@ jobs:
     name: Create Branch from Issue
     runs-on: ubuntu-latest
     if: github.event.issue.user.type != 'Bot'
+
     steps:
       - name: Resolve issue metadata
         id: resolve
@@ -61,7 +62,7 @@ jobs:
             const issueTypeName = (issue.issueType?.name || "").toLowerCase().trim();
 
             const typeMap = {
-              feature: "feat",
+              feature: "feature",
               fix: "fix",
               task: "chore",
               chore: "chore",
@@ -85,8 +86,8 @@ jobs:
               .replace(/[\u0300-\u036f]/g, "")
               .replace(/[^a-z0-9\s]/g, " ")
               .trim()
-              .replace(/\s+/g, "_")
-              .replace(/_+/g, "_")
+              .replace(/\s+/g, "-")
+              .replace(/_+/g, "-")
               .replace(/^_|_$/g, "");
 
             const branchName = `${branchType}/${issue.number}-${slug}`;
