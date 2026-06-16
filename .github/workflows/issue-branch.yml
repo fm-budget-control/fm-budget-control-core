@@ -1,126 +1,212 @@
 name: Issue Branch
-
 run-name: "Issue Branch — #${{ github.event.issue.number }} — ${{ github.event.issue.title }}"
 
 on:
   issues:
-    types:
-      - opened
-      - reopened # Covers the case where an issue is closed and re-opened
+    types: [assigned]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.issue.number }}
-  cancel-in-progress: false # Never cancel — each issue gets exactly one branch
+  cancel-in-progress: false
 
 permissions:
-  contents: write # Create branches
-  issues: write   # Post comment + assign issue
+  contents: write
+  issues: write
 
 jobs:
   create-branch:
     name: Create Branch from Issue
     runs-on: ubuntu-latest
-    # Skip bot-created issues (e.g. Dependabot) — they manage their own branches.
     if: github.event.issue.user.type != 'Bot'
     steps:
-      - name: Fetch issue type via GraphQL
-        id: issue_type
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TYPE=$(gh api graphql -f query='
-            query($nodeId: ID!) {
-              node(id: $nodeId) {
-                ... on Issue {
-                  issueType {
-                    name
+      - name: Resolve issue metadata
+        id: resolve
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const query = `
+              query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $issueNumber) {
+                    id
+                    number
+                    title
+                    issueType {
+                      name
+                    }
                   }
                 }
               }
+            `;
+
+            const result = await github.graphql(query, {
+              owner,
+              repo,
+              issueNumber,
+            });
+
+            const issue = result.repository?.issue;
+            if (!issue) {
+              core.setFailed(`Issue #${issueNumber} not found.`);
+              return;
             }
-          ' -f nodeId="${{ github.event.issue.node_id }}" \
-            --jq '.data.node.issueType.name // "Feature"')
 
-          echo "name=${TYPE}" >> $GITHUB_OUTPUT
+            const issueTypeName = (issue.issueType?.name || "").toLowerCase().trim();
 
-      - name: Resolve branch prefix from issue type
-        id: prefix
-        run: |
-          case "${{ steps.issue_type.outputs.name }}" in
-            "Bug")     echo "value=fix"   >> $GITHUB_OUTPUT ;;
-            "Task")    echo "value=chore" >> $GITHUB_OUTPUT ;;
-            "Chore")   echo "value=chore" >> $GITHUB_OUTPUT ;;
-            *)         echo "value=feat"  >> $GITHUB_OUTPUT ;;
-            # Feature, unknown types, and unset all default to feat/
-          esac
+            const typeMap = {
+              feature: "feat",
+              fix: "fix",
+              task: "chore",
+              chore: "chore",
+              hotfix: "hotfix",
+            };
 
-      - name: Slugify issue title
-        id: slug
-        env:
-          ISSUE_TITLE: ${{ github.event.issue.title }} # Passed as env var — never inline — to prevent script injection
-        run: |
-          SLUG=$(echo "$ISSUE_TITLE" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed 's/[^a-z0-9]/-/g' \
-            | sed 's/-\+/-/g' \
-            | sed 's/^-//;s/-$//' \
-            | cut -c1-50)
-          echo "value=${SLUG}" >> $GITHUB_OUTPUT
+            const branchType = typeMap[issueTypeName];
 
-      - name: Compose branch name
-        id: branch
-        run: |
-          NAME="${{ steps.prefix.outputs.value }}/${{ github.event.issue.number }}-${{ steps.slug.outputs.value }}"
-          echo "name=${NAME}" >> $GITHUB_OUTPUT
+            if (!branchType) {
+              core.setOutput("should_create", "false");
+              core.setOutput(
+                "reason",
+                `Unsupported or missing issue type: "${issueTypeName || "none"}"`
+              );
+              return;
+            }
 
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+            const slug = issue.title
+              .toLowerCase()
+              .normalize("NFKD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-z0-9\s]/g, " ")
+              .trim()
+              .replace(/\s+/g, "_")
+              .replace(/_+/g, "_")
+              .replace(/^_|_$/g, "");
+
+            const branchName = `${branchType}/${issue.number}-${slug}`;
+
+            core.setOutput("should_create", "true");
+            core.setOutput("issue_id", issue.id);
+            core.setOutput("issue_type", issueTypeName);
+            core.setOutput("branch_name", branchName);
+
+      - name: Skip if issue type is missing or unsupported
+        if: steps.resolve.outputs.should_create != 'true'
+        run: echo "${{ steps.resolve.outputs.reason }}"
+
+      - name: Resolve default branch SHA
+        if: steps.resolve.outputs.should_create == 'true'
+        id: base
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
-          ref: main # Always branch from main explicitly — immune to default branch changes
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-      - name: Create branch from main
+            const repoInfo = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repoInfo.data.default_branch;
+
+            const ref = await github.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${defaultBranch}`,
+            });
+
+            core.setOutput("default_branch", defaultBranch);
+            core.setOutput("default_branch_oid", ref.data.object.sha);
+
+      - name: Create linked branch
+        if: steps.resolve.outputs.should_create == 'true'
+        id: linked_branch
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ steps.branch.outputs.name }}
-        run: |
-          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" &>/dev/null; then
-            echo "Branch '$BRANCH_NAME' already exists on remote — skipping creation."
-          else
-            git checkout -b "$BRANCH_NAME"
-            git push origin "$BRANCH_NAME"
-            echo "Branch '$BRANCH_NAME' created."
-          fi
+          ISSUE_ID: ${{ steps.resolve.outputs.issue_id }}
+          BRANCH_NAME: ${{ steps.resolve.outputs.branch_name }}
+          DEFAULT_BRANCH_OID: ${{ steps.base.outputs.default_branch_oid }}
+        with:
+          script: |
+            const mutation = `
+              mutation($issueId: ID!, $name: String!, $oid: GitObjectID!) {
+                createLinkedBranch(input: {
+                  issueId: $issueId
+                  name: $name
+                  oid: $oid
+                }) {
+                  linkedBranch {
+                    id
+                    ref {
+                      name
+                    }
+                  }
+                }
+              }
+            `;
 
-      - name: Assign issue to opener
+            try {
+              const result = await github.graphql(mutation, {
+                issueId: process.env.ISSUE_ID,
+                name: process.env.BRANCH_NAME,
+                oid: process.env.DEFAULT_BRANCH_OID,
+              });
+
+              core.setOutput(
+                "final_branch_name",
+                result.createLinkedBranch.linkedBranch.ref.name
+              );
+              core.setOutput("created", "true");
+            } catch (error) {
+              const message = String(error.message || "");
+
+              if (
+                message.includes("already exists") ||
+                message.includes("Name already exists") ||
+                message.includes("Reference already exists")
+              ) {
+                core.setOutput("final_branch_name", process.env.BRANCH_NAME);
+                core.setOutput("created", "false");
+              } else {
+                throw error;
+              }
+            }
+
+      - name: Comment on issue
+        if: steps.resolve.outputs.should_create == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue edit "${{ github.event.issue.number }}" \
-            --add-assignee "${{ github.event.issue.user.login }}"
+          BRANCH_NAME: ${{ steps.linked_branch.outputs.final_branch_name }}
+          CREATED: ${{ steps.linked_branch.outputs.created }}
+          ISSUE_TYPE: ${{ steps.resolve.outputs.issue_type }}
+          DEFAULT_BRANCH: ${{ steps.base.outputs.default_branch }}
+        with:
+          script: |
+            const branch = process.env.BRANCH_NAME;
+            const created = process.env.CREATED === "true";
+            const issueType = process.env.ISSUE_TYPE;
+            const defaultBranch = process.env.DEFAULT_BRANCH;
 
-      - name: Post comment on issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ steps.branch.outputs.name }}
-          ISSUE_TYPE: ${{ steps.issue_type.outputs.name }}
-        run: |
-          NUMBER="${{ github.event.issue.number }}"
+            const body = created
+              ? [
+                  `Created linked branch from issue type **${issueType}**: \`${branch}\``,
+                  "",
+                  `Base branch: \`${defaultBranch}\``,
+                  "",
+                  "Use locally:",
+                  "",
+                  "```bash",
+                  `./scripts/start-issue.sh ${branch}`,
+                  "```",
+                ].join("\n")
+              : `Linked branch already exists or the branch name is already taken: \`${branch}\``;
 
-          gh issue comment "$NUMBER" --body "### 🌿 Branch created
-
-          A branch has been automatically created for this issue and assigned to you.
-
-          | | |
-          |---|---|
-          | **Branch** | \`${BRANCH_NAME}\` |
-          | **Type** | ${ISSUE_TYPE} |
-          | **Base** | \`main\` |
-
-          **Get started locally:**
-          \`\`\`bash
-          ./scripts/start-issue.sh ${BRANCH_NAME}
-          \`\`\`
-
-          > Remember to use [Conventional Commits](https://www.conventionalcommits.org) when committing to this branch.
-          > Pre-flight will fire automatically on your first push.
-          > Opening a PR from this branch will automatically close #${NUMBER} on merge."
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body,
+            });
