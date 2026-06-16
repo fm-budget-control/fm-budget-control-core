@@ -55,18 +55,9 @@ jobs:
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required by @semantic-release/git for the push-back commit
           # ── npm authentication ────────────────────────────────────────────
-          # STAGE A (bootstrap): uncomment NPM_TOKEN below for the very first
-          # publish only, then revoke the token and delete this line.
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          run: |
-           npm config get registry
-           npm whoami
-          #
-          # STAGE B (permanent): npm Trusted Publishing via OIDC.
-          # No token needed — the npm CLI authenticates automatically using
-          # the short-lived OIDC token issued by id-token: write above,
-          # against the Trusted Publisher configured at:
+          # npm Trusted Publishing via OIDC — no token needed.
+          # The npm CLI authenticates automatically using the short-lived OIDC
+          # token issued by id-token: write above, against the Trusted Publisher
+          # configured at:
           # npmjs.com/package/@fm-budget-control/budget-core/access
