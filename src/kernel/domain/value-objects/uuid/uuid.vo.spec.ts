@@ -1,4 +1,4 @@
-import { Uuid, InvalidUuidError } from "./Uuid.vo.js"
+import { Uuid, InvalidUuidError } from "./uuid.vo.js"
 
 describe("Uuid", () => {
   const validUuidV4 = "550e8400-e29b-41d4-a716-446655440000";
