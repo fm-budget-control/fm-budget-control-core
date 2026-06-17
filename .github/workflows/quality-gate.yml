@@ -37,6 +37,9 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
+      - name: Run type specs
+        run: npm run test:types
+
   test:
     name: Test & Coverage
     runs-on: ubuntu-latest
