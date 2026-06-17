@@ -64,9 +64,7 @@ jobs:
             const typeMap = {
               feature: "feat",
               bug: "fix",
-              task: "chore",
               chore: "chore",
-              hotfix: "hotfix",
             };
 
             const branchType = typeMap[issueTypeName];
