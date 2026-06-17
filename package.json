@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
-    "prepare": "husky"
+
+    "test:types": "tsc --project tsconfig.type-tests.json --noEmit && echo \"Type specs passed\"",    "prepare": "husky"
   },
   "repository": {
     "type": "git",

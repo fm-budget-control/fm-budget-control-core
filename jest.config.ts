@@ -17,6 +17,17 @@ const config: Config = {
   ],
   coverageReporters: ['lcov', 'text'],
   coverageDirectory: 'coverage',
+  coveragePathIgnorePatterns: [
+    "/node_modules/",
+    "/dist/",
+    "\\.type-spec\\.ts$",
+
+  ],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/dist/",
+    "\\.type-spec\\.ts$",
+  ],
 };
  
 export default config;
