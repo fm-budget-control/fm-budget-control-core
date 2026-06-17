@@ -76,6 +76,13 @@ export class Uuid<TBrand = unknown> {
    * Checks whether a value is already a canonical UUID v4 string.
    *
    * This method does not trim or lowercase the input.
+   *
+   * Contract: this method operates on the raw string only. `of` calls this
+   * directly on unnormalized input, and `parse`/`tryParse` call this on
+   * already-normalized input. Do not add trimming or case-folding here —
+   * doing so would silently change `of`'s behavior (it would start
+   * accepting non-canonical input) since `of` has no normalization step
+   * of its own to fall back on.
    */
   static isValid(value: string): boolean {
     return UUID_V4_REGEX.test(value);
@@ -88,8 +95,23 @@ export class Uuid<TBrand = unknown> {
     return value.trim().toLowerCase();
   }
 
-  equals(other: Uuid<unknown>): boolean {
-    return this.value === other.value;
+  /**
+   * Value equality, independent of brand.
+   *
+   * Accepts `unknown` so this can never throw regardless of what's passed —
+   * safe to call with values that haven't been parsed into a `Uuid` yet
+   * (deserialized JSON, optional fields, `Map.get` results, etc.). Returns
+   * `false` for `null`, `undefined`, primitives, and structurally similar
+   * but non-`Uuid` objects, rather than throwing.
+   *
+   * Note: this compares by value only, not by brand (see `Uuid<unknown>`
+   * on `of`/`parse`). A `UserId` and an `AccountId` holding the same string
+   * will compare equal here. Do not rely on `equals` alone for brand-
+   * sensitive checks — the type system, not this method, is what prevents
+   * a `UserId` from being passed where an `AccountId` is expected.
+   */
+  equals(other: unknown): boolean {
+    return other instanceof Uuid && this.value === other.value;
   }
 
   toString(): string {

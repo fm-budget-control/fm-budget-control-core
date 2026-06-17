@@ -262,6 +262,38 @@ describe("Uuid", () => {
 
       expect(userId.equals(accountId)).toBe(true);
     });
+
+    it("returns false when compared against null", () => {
+      const uuid = Uuid.of(validUuidV4);
+
+      expect(uuid.equals(null)).toBe(false);
+    });
+
+    it("returns false when compared against undefined", () => {
+      const uuid = Uuid.of(validUuidV4);
+
+      expect(uuid.equals(undefined)).toBe(false);
+    });
+
+    it("returns false when compared against a plain string", () => {
+      const uuid = Uuid.of(validUuidV4);
+
+      expect(uuid.equals(validUuidV4)).toBe(false);
+    });
+
+    it("returns false when compared against a structurally similar non-Uuid object", () => {
+      const uuid = Uuid.of(validUuidV4);
+      const impostor = { value: validUuidV4 };
+
+      expect(uuid.equals(impostor)).toBe(false);
+    });
+
+    it("does not throw when compared against null or undefined", () => {
+      const uuid = Uuid.of(validUuidV4);
+
+      expect(() => uuid.equals(null)).not.toThrow();
+      expect(() => uuid.equals(undefined)).not.toThrow();
+    });
   });
 
   describe("toString", () => {
