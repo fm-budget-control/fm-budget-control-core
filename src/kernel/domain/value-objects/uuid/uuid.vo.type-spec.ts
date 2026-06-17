@@ -31,10 +31,12 @@ acceptsAccountId(userId);
 acceptsTransactionId(userId);
 
 // @ts-expect-error AccountId must not be assignable from UserId.
-const wrongAccountId: AccountId = userId;
+
+void (userId satisfies AccountId);
 
 // @ts-expect-error UserId must not be assignable from AccountId.
-const wrongUserId: UserId = accountId;
+
+void (accountId satisfies UserId);
 
 const unbrandedUuid = Uuid.of(validUuid);
 
