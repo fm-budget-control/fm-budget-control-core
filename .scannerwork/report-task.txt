@@ -1,0 +1,7 @@
+organization=fm-budget-control
+projectKey=fm-budget-control_fm-budget-control-core2
+serverUrl=https://sonarcloud.io
+serverVersion=8.0.0.92448
+dashboardUrl=https://sonarcloud.io/dashboard?id=fm-budget-control_fm-budget-control-core2
+ceTaskId=AZ7clRxUxkznAhR_vyXb
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZ7clRxUxkznAhR_vyXb

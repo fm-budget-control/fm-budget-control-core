@@ -57,8 +57,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Clean previous coverage
+        run: rm -rf coverage
+
       - name: Run tests with coverage
         run: npm run test:coverage
+
+      - name: Verify generated coverage report
+        run: |
+          test -f coverage/lcov.info
+          echo "Generated coverage report:"
+          ls -la coverage/lcov.info
+          echo ""
+          echo "Source files in LCOV:"
+          grep '^SF:' coverage/lcov.info
+          echo ""
+          echo "Coverage counters:"
+          grep '^LF:\|^LH:' coverage/lcov.info
 
       - name: Upload coverage report
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
@@ -83,6 +98,23 @@ jobs:
           name: coverage-report
           path: coverage/
 
+      - name: Confirm coverage file exists
+        run: ls -la coverage/
+
+      - name: Debug LCOV paths
+        run: |
+          echo "LCOV exists:"
+          ls -la coverage/lcov.info
+          echo ""
+          echo "First SF entries:"
+          grep '^SF:' coverage/lcov.info | head -30
+          echo ""
+          echo "Project files:"
+          find src -type f | sort | head -80
+
+      - name: Clean Sonar workspace
+        run: rm -rf .scannerwork
+
       - name: Resolve package version
         id: pkg
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
@@ -95,7 +127,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectVersion=${{ steps.pkg.outputs.version }}
-
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
   build:
     name: Build
     runs-on: ubuntu-latest
