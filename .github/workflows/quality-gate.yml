@@ -83,6 +83,9 @@ jobs:
           name: coverage-report
           path: coverage/
 
+      - name: Confirm coverage file exists
+        run: ls -la coverage/
+
       - name: Resolve package version
         id: pkg
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
