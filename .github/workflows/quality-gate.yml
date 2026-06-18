@@ -86,6 +86,17 @@ jobs:
       - name: Confirm coverage file exists
         run: ls -la coverage/
 
+      - name: Debug LCOV paths
+        run: |
+          echo "LCOV exists:"
+          ls -la coverage/lcov.info
+          echo ""
+          echo "First SF entries:"
+          grep '^SF:' coverage/lcov.info | head -30
+          echo ""
+          echo "Project files:"
+          find src -type f | sort | head -80
+
       - name: Resolve package version
         id: pkg
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
