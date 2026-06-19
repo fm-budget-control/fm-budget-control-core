@@ -12,6 +12,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "types": ["jest", "node"],
+    "isolatedModules": true
   },
   "include": ["src/**/*"]
 }
