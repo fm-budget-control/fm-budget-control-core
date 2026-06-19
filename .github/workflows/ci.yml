@@ -3,7 +3,7 @@ name: CI
 run-name: >-
   ${{ github.event_name == 'pull_request'
    && format('CI — Validate PR #{0}: {1} — {2}', github.event.pull_request.number, github.head_ref, github.actor)
-   || format('CI — Merged to main: {0} — {1}', github.event.head_commit.message, github.actor) }}
+    || format('CI — Merged to main: PR #{0} — {1}', github.event.head_commit.message, github.actor) }}
 
 on:
   pull_request:
