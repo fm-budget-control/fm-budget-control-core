@@ -14,6 +14,7 @@ const config: Config = {
     'src/**/*.ts',
     '!src/**/*.test.ts',
     '!src/**/*.spec.ts',
+    '!src/**/*.type-spec.ts',
   ],
   coverageReporters: ['lcov', 'text'],
   coverageDirectory: 'coverage',
