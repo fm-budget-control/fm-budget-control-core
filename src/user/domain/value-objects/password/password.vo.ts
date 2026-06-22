@@ -1,7 +1,7 @@
 const MIN_LENGTH = 5;
 const MAX_LENGTH = 16;
 const HAS_NUMBER = /\d/;
-const HAS_SPECIAL = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+const HAS_SPECIAL = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
 
 export class InvalidPasswordError extends TypeError {
   constructor(message: string) {
