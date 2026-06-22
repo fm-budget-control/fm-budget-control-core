@@ -9,7 +9,9 @@ import type { Uuid } from "../../../../kernel/domain/value-objects/index.js";
  * call sites read `UserId` instead of `Uuid<"User">` everywhere.
  *
  * Construct with `Uuid.of<"User">(value)` / `Uuid.parse<"User">(value)`,
- * not a bare cast — see the architectural note on `User` regarding
- * `as UserId` defeating phantom branding.
+ * never `as UserId`. A bare cast bypasses the validation `Uuid.of`/`parse`
+ * perform and defeats the purpose of phantom branding — TypeScript would
+ * accept it, but nothing would have checked the value is actually a valid
+ * UUID.
  */
 export type UserId = Uuid<"User">;
