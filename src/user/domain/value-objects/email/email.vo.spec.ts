@@ -60,21 +60,86 @@ describe("Email", () => {
       );
     });
 
+    it("throws InvalidEmailError when value contains tabs", () => {
+      expect(() => Email.of("fabio\treis@example.com")).toThrow(
+        InvalidEmailError,
+      );
+    });
+
     it("throws InvalidEmailError when value contains multiple @", () => {
       expect(() => Email.of("fabio@@example.com")).toThrow(InvalidEmailError);
     });
 
     it("throws InvalidEmailError when value exceeds 254 characters", () => {
-      const oversizedEmail = `${"a".repeat(250)}@b.com`;
+      const oversizedEmail = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(
+        63,
+      )}.${"d".repeat(62)}`;
 
+      expect(oversizedEmail).toHaveLength(255);
       expect(() => Email.of(oversizedEmail)).toThrow(InvalidEmailError);
     });
 
     it("accepts a value at exactly 254 characters", () => {
-      const localPart = "a".repeat(254 - "@b.com".length);
-      const maxLengthEmail = `${localPart}@b.com`;
+      const maxLengthEmail = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(
+        63,
+      )}.${"d".repeat(61)}`;
 
+      expect(maxLengthEmail).toHaveLength(254);
       expect(() => Email.of(maxLengthEmail)).not.toThrow();
+    });
+
+    it("throws InvalidEmailError when local part exceeds 64 characters", () => {
+      const email = `${"a".repeat(65)}@example.com`;
+
+      expect(() => Email.of(email)).toThrow(InvalidEmailError);
+    });
+
+    it("accepts local part with exactly 64 characters", () => {
+      const email = `${"a".repeat(64)}@example.com`;
+
+      expect(() => Email.of(email)).not.toThrow();
+    });
+
+    it("throws InvalidEmailError when local part starts with a dot", () => {
+      expect(() => Email.of(".fabio@example.com")).toThrow(InvalidEmailError);
+    });
+
+    it("throws InvalidEmailError when local part ends with a dot", () => {
+      expect(() => Email.of("fabio.@example.com")).toThrow(InvalidEmailError);
+    });
+
+    it("throws InvalidEmailError when local part contains consecutive dots", () => {
+      expect(() => Email.of("fabio..reis@example.com")).toThrow(
+        InvalidEmailError,
+      );
+    });
+
+    it("accepts allowed local part symbols", () => {
+      expect(() => Email.of("fabio.reis+test@example.com")).not.toThrow();
+    });
+
+    it("throws InvalidEmailError when domain label starts with a hyphen", () => {
+      expect(() => Email.of("fabio@-example.com")).toThrow(InvalidEmailError);
+    });
+
+    it("throws InvalidEmailError when domain label ends with a hyphen", () => {
+      expect(() => Email.of("fabio@example-.com")).toThrow(InvalidEmailError);
+    });
+
+    it("throws InvalidEmailError when domain contains an empty label", () => {
+      expect(() => Email.of("fabio@example..com")).toThrow(InvalidEmailError);
+    });
+
+    it("throws InvalidEmailError when domain label exceeds 63 characters", () => {
+      const email = `fabio@${"a".repeat(64)}.com`;
+
+      expect(() => Email.of(email)).toThrow(InvalidEmailError);
+    });
+
+    it("accepts domain label with exactly 63 characters", () => {
+      const email = `fabio@${"a".repeat(63)}.com`;
+
+      expect(() => Email.of(email)).not.toThrow();
     });
   });
 
@@ -116,6 +181,12 @@ describe("Email", () => {
     it("throws InvalidEmailError when value is only whitespace", () => {
       expect(() => Email.parse("   ")).toThrow(InvalidEmailError);
     });
+
+    it("throws InvalidEmailError when normalized value exceeds local part length", () => {
+      const email = ` ${"A".repeat(65)}@EXAMPLE.COM `;
+
+      expect(() => Email.parse(email)).toThrow(InvalidEmailError);
+    });
   });
 
   describe("tryParse", () => {
@@ -135,9 +206,17 @@ describe("Email", () => {
     });
 
     it("returns null for a value exceeding the max length after normalization", () => {
-      const oversizedEmail = `${"a".repeat(250)}@b.com`;
+      const oversizedEmail = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(
+        63,
+      )}.${"d".repeat(62)}`;
 
       expect(Email.tryParse(oversizedEmail)).toBeNull();
+    });
+
+    it("returns null when local part exceeds 64 characters after normalization", () => {
+      const email = ` ${"A".repeat(65)}@EXAMPLE.COM `;
+
+      expect(Email.tryParse(email)).toBeNull();
     });
   });
 
@@ -159,7 +238,43 @@ describe("Email", () => {
     });
 
     it("returns false for a value exceeding 254 characters", () => {
-      expect(Email.isValid(`${"a".repeat(250)}@b.com`)).toBe(false);
+      const oversizedEmail = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(
+        63,
+      )}.${"d".repeat(62)}`;
+
+      expect(Email.isValid(oversizedEmail)).toBe(false);
+    });
+
+    it("returns false when local part exceeds 64 characters", () => {
+      expect(Email.isValid(`${"a".repeat(65)}@example.com`)).toBe(false);
+    });
+
+    it("returns false when local part starts with a dot", () => {
+      expect(Email.isValid(".fabio@example.com")).toBe(false);
+    });
+
+    it("returns false when local part ends with a dot", () => {
+      expect(Email.isValid("fabio.@example.com")).toBe(false);
+    });
+
+    it("returns false when local part contains consecutive dots", () => {
+      expect(Email.isValid("fabio..reis@example.com")).toBe(false);
+    });
+
+    it("returns false when domain label starts with a hyphen", () => {
+      expect(Email.isValid("fabio@-example.com")).toBe(false);
+    });
+
+    it("returns false when domain label ends with a hyphen", () => {
+      expect(Email.isValid("fabio@example-.com")).toBe(false);
+    });
+
+    it("returns false when domain contains an empty label", () => {
+      expect(Email.isValid("fabio@example..com")).toBe(false);
+    });
+
+    it("returns false when domain label exceeds 63 characters", () => {
+      expect(Email.isValid(`fabio@${"a".repeat(64)}.com`)).toBe(false);
     });
   });
 
