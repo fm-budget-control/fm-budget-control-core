@@ -1,0 +1,103 @@
+import type { UserId } from "../value-objects/index.js";
+import { FullName, Email } from "../value-objects/index.js";
+import { IsoDate } from "../../../kernel/domain/value-objects/index.js";
+
+/**
+ * Minimum age, in years, required to register. Enforced on creation only —
+ * birthDate is not currently mutable, so re-validation on update is not
+ * needed yet. If an `updateBirthDate` method is ever added, it must run
+ * the same check `create` does.
+ */
+const MINIMUM_AGE_YEARS = 18;
+
+export class User {
+  private constructor(
+    public readonly id: UserId,
+    public readonly fullName: FullName,
+    public readonly email: Email,
+    public readonly birthDate: IsoDate,
+    public readonly createdAt: IsoDate,
+    public readonly updatedAt: IsoDate,
+  ) {
+    Object.freeze(this);
+  }
+
+  static create(params: {
+    id: UserId;
+    fullName: FullName;
+    email: Email;
+    birthDate: IsoDate;
+    createdAt: IsoDate;
+    updatedAt: IsoDate;
+  }): User {
+    if (!User.isAbove18(params.birthDate, params.createdAt)) {
+      throw new TypeError("User must be at least 18 years old to register");
+    }
+
+    return new User(
+      params.id,
+      params.fullName,
+      params.email,
+      params.birthDate,
+      params.createdAt,
+      params.updatedAt,
+    );
+  }
+
+  updateName(newName: FullName, updatedAt: IsoDate): User {
+    return new User(
+      this.id,
+      newName,
+      this.email,
+      this.birthDate,
+      this.createdAt,
+      updatedAt,
+    );
+  }
+
+  updateEmail(newEmail: Email, updatedAt: IsoDate): User {
+    return new User(
+      this.id,
+      this.fullName,
+      newEmail,
+      this.birthDate,
+      this.createdAt,
+      updatedAt,
+    );
+  }
+
+  /**
+   * Identity equality — two Users are equal if they represent the same
+   * aggregate, regardless of which fields currently differ in value.
+   */
+  equals(other: unknown): boolean {
+    return other instanceof User && this.id.equals(other.id);
+  }
+
+  /**
+   * Checks whether `birthDate` is at least `MINIMUM_AGE_YEARS` years before
+   * `referenceDate`.
+   *
+   * Goes through `IsoDate.toUTCDate()` rather than `new Date(value)`
+   * directly, per the contract documented on `IsoDate` — date-only ISO
+   * strings happen to parse as UTC midnight under the current spec, but
+   * relying on that here would duplicate a guarantee `IsoDate` already
+   * owns, rather than reusing it.
+   */
+  private static isAbove18(
+    birthDate: IsoDate,
+    referenceDate: IsoDate,
+  ): boolean {
+    const birth = birthDate.toUTCDate();
+    const reference = referenceDate.toUTCDate();
+    const age = reference.getUTCFullYear() - birth.getUTCFullYear();
+    const monthDiff = reference.getUTCMonth() - birth.getUTCMonth();
+    const dayDiff = reference.getUTCDate() - birth.getUTCDate();
+
+    return (
+      age > MINIMUM_AGE_YEARS ||
+      (age === MINIMUM_AGE_YEARS &&
+        (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
+    );
+  }
+}
