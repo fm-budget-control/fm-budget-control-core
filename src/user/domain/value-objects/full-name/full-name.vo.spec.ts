@@ -91,7 +91,7 @@ describe("FullName", () => {
       const secondPart = "b".repeat(49);
       const maxLengthName = `${firstPart} ${secondPart}`;
 
-      expect(maxLengthName.length).toBe(100);
+      expect(maxLengthName).toHaveLength(100);
       expect(() => FullName.of(maxLengthName)).not.toThrow();
     });
   });
