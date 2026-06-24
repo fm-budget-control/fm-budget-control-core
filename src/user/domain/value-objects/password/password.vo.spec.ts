@@ -70,7 +70,7 @@ describe("Password", () => {
     it("accepts a value at exactly the maximum length", () => {
       const maxLength = "aaaaaaaaaaaaa1!a";
 
-      expect(maxLength.length).toBe(16);
+      expect(maxLength).toHaveLength(16);
       expect(() => Password.of(maxLength)).not.toThrow();
     });
 
