@@ -1,6 +1,6 @@
 import { User } from "./user.entity.js";
 import { FullName, Email, UserId } from "../value-objects/index.js";
-import { IsoDate, Id } from "../../../kernel/domain/value-objects/index.js";
+import { IsoDate, IsoDateTime, Id } from "../../../kernel/domain/value-objects/index.js";
 
 function birthdateRelativeToToday(
   yearOffset: number,
@@ -25,15 +25,15 @@ describe("User", () => {
   const validFullName = FullName.of("Fabio Reis");
   const validEmail = Email.of("fabio@example.com");
   const adultBirthDate = IsoDate.of("1990-01-01");
-  const auditDate = IsoDate.of("2026-06-24");
+  const auditDateTime = IsoDateTime.of("2026-06-24T12:00:00Z");
 
   const baseParams = {
     id: validId,
     fullName: validFullName,
     email: validEmail,
     birthDate: adultBirthDate,
-    createdAt: auditDate,
-    updatedAt: auditDate,
+    createdAt: auditDateTime,
+    updatedAt: auditDateTime,
   };
 
   describe("reconstitute", () => {
@@ -44,8 +44,8 @@ describe("User", () => {
       expect(user.fullName).toBe(validFullName);
       expect(user.email).toBe(validEmail);
       expect(user.birthDate).toBe(adultBirthDate);
-      expect(user.createdAt).toBe(auditDate);
-      expect(user.updatedAt).toBe(auditDate);
+      expect(user.createdAt).toBe(auditDateTime);
+      expect(user.updatedAt).toBe(auditDateTime);
     });
 
     it("does not enforce the minimum age invariant", () => {
@@ -116,7 +116,7 @@ describe("User", () => {
     it("returns a new User with the updated name", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
-      const updatedAt = IsoDate.of("2026-06-25");
+      const updatedAt = IsoDateTime.of("2026-06-25T08:00:00Z");
 
       const updated = user.updateName(newName, updatedAt);
 
@@ -128,7 +128,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
 
-      user.updateName(newName, IsoDate.of("2026-06-25"));
+      user.updateName(newName, IsoDateTime.of("2026-06-25T08:00:00Z"));
 
       expect(user.fullName).toBe(validFullName);
     });
@@ -136,7 +136,7 @@ describe("User", () => {
     it("preserves all other fields", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
-      const updatedAt = IsoDate.of("2026-06-25");
+      const updatedAt = IsoDateTime.of("2026-06-25T08:00:00Z");
 
       const updated = user.updateName(newName, updatedAt);
 
@@ -150,7 +150,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const updated = user.updateName(
         FullName.of("Fabio Santos"),
-        IsoDate.of("2026-06-25"),
+        IsoDateTime.of("2026-06-25T08:00:00Z"),
       );
 
       expect(Object.isFrozen(updated)).toBe(true);
@@ -161,7 +161,7 @@ describe("User", () => {
     it("returns a new User with the updated email", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
-      const updatedAt = IsoDate.of("2026-06-25");
+      const updatedAt = IsoDateTime.of("2026-06-25T08:00:00Z");
 
       const updated = user.updateEmail(newEmail, updatedAt);
 
@@ -173,7 +173,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
 
-      user.updateEmail(newEmail, IsoDate.of("2026-06-25"));
+      user.updateEmail(newEmail, IsoDateTime.of("2026-06-25T08:00:00Z"));
 
       expect(user.email).toBe(validEmail);
     });
@@ -181,7 +181,7 @@ describe("User", () => {
     it("preserves all other fields", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
-      const updatedAt = IsoDate.of("2026-06-25");
+      const updatedAt = IsoDateTime.of("2026-06-25T08:00:00Z");
 
       const updated = user.updateEmail(newEmail, updatedAt);
 
@@ -195,7 +195,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const updated = user.updateEmail(
         Email.of("fabio.reis@example.com"),
-        IsoDate.of("2026-06-25"),
+        IsoDateTime.of("2026-06-25T08:00:00Z"),
       );
 
       expect(Object.isFrozen(updated)).toBe(true);
