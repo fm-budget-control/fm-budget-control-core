@@ -35,8 +35,8 @@ describe("Id", () => {
       expect(() => Id.of("")).toThrow(InvalidIdError);
     });
 
-    it("throws InvalidIdError only whitespace is passed", () => {
-      expect(() => Id.of("   ")).not.toThrow();
+    it("throws InvalidIdError when only whitespace is passed", () => {
+      expect(() => Id.of("   ")).toThrow(InvalidIdError);
     });
 
     it("throws InvalidIdError with a helpful message", () => {
@@ -108,8 +108,8 @@ describe("Id", () => {
       expect(Id.isValid("")).toBe(false);
     });
 
-    it("returns true for a whitespace-only string", () => {
-      expect(Id.isValid("   ")).toBe(true);
+    it("returns false for a whitespace-only string", () => {
+      expect(Id.isValid("   ")).toBe(false);
     });
   });
 
