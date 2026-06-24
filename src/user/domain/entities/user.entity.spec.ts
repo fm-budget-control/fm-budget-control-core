@@ -1,24 +1,67 @@
 import { User } from "./user.entity.js";
 import { FullName, Email, UserId } from "../value-objects/index.js";
-import { IsoDate, Uuid } from "../../../kernel/domain/value-objects/index.js";
+import { IsoDate, Id } from "../../../kernel/domain/value-objects/index.js";
+
+function birthdateRelativeToToday(
+  yearOffset: number,
+  monthOffset: number = 0,
+  dayOffset: number = 0,
+): IsoDate {
+  const today = new Date();
+  const d = new Date(
+    Date.UTC(
+      today.getUTCFullYear() + yearOffset,
+      today.getUTCMonth() + monthOffset,
+      today.getUTCDate() + dayOffset,
+    ),
+  );
+  return IsoDate.of(d.toISOString().slice(0, 10));
+}
 
 describe("User", () => {
-  const validId: UserId = Uuid.of<"User">(
+  const validId: UserId = Id.of<"User">(
     "550e8400-e29b-41d4-a716-446655440000",
   );
   const validFullName = FullName.of("Fabio Reis");
   const validEmail = Email.of("fabio@example.com");
-  const adultBirthDate = IsoDate.of("2000-06-22");
-  const referenceDate = IsoDate.of("2026-06-22");
+  const adultBirthDate = IsoDate.of("1990-01-01");
+  const auditDate = IsoDate.of("2026-06-24");
 
   const baseParams = {
     id: validId,
     fullName: validFullName,
     email: validEmail,
     birthDate: adultBirthDate,
-    createdAt: referenceDate,
-    updatedAt: referenceDate,
+    createdAt: auditDate,
+    updatedAt: auditDate,
   };
+
+  describe("reconstitute", () => {
+    it("restores a User from persisted state", () => {
+      const user = User.reconstitute(baseParams);
+
+      expect(user.id).toBe(validId);
+      expect(user.fullName).toBe(validFullName);
+      expect(user.email).toBe(validEmail);
+      expect(user.birthDate).toBe(adultBirthDate);
+      expect(user.createdAt).toBe(auditDate);
+      expect(user.updatedAt).toBe(auditDate);
+    });
+
+    it("does not enforce the minimum age invariant", () => {
+      const underageBirthDate = birthdateRelativeToToday(-17);
+
+      expect(() =>
+        User.reconstitute({ ...baseParams, birthDate: underageBirthDate }),
+      ).not.toThrow();
+    });
+
+    it("freezes the reconstituted instance", () => {
+      const user = User.reconstitute(baseParams);
+
+      expect(Object.isFrozen(user)).toBe(true);
+    });
+  });
 
   describe("create", () => {
     it("creates a User when the user is over 18", () => {
@@ -30,49 +73,36 @@ describe("User", () => {
       expect(user.birthDate).toBe(adultBirthDate);
     });
 
-    it("creates a User when the user turns 18 exactly on the reference date", () => {
-      const birthDate = IsoDate.of("2008-06-22");
-      const reference = IsoDate.of("2026-06-22");
+    it("creates a User when the user turns 18 exactly today", () => {
+      const birthDate = birthdateRelativeToToday(-18);
 
-      expect(() =>
-        User.create({ ...baseParams, birthDate, createdAt: reference }),
-      ).not.toThrow();
+      expect(() => User.create({ ...baseParams, birthDate })).not.toThrow();
     });
 
-    it("throws when the user turns 18 the day after the reference date", () => {
-      const birthDate = IsoDate.of("2008-06-23");
-      const reference = IsoDate.of("2026-06-22");
+    it("throws when the user turns 18 tomorrow", () => {
+      const birthDate = birthdateRelativeToToday(-18, 0, +1);
 
       expect(() =>
-        User.create({ ...baseParams, birthDate, createdAt: reference }),
+        User.create({ ...baseParams, birthDate }),
       ).toThrow("User must be at least 18 years old to register");
     });
 
     it("throws when the user is 17", () => {
-      const birthDate = IsoDate.of("2009-06-22");
-      const reference = IsoDate.of("2026-06-22");
+      const birthDate = birthdateRelativeToToday(-17);
 
-      expect(() =>
-        User.create({ ...baseParams, birthDate, createdAt: reference }),
-      ).toThrow(TypeError);
+      expect(() => User.create({ ...baseParams, birthDate })).toThrow(TypeError);
     });
 
-    it("creates a User when birth month is earlier than the reference month in the 18th year", () => {
-      const birthDate = IsoDate.of("2008-01-01");
-      const reference = IsoDate.of("2026-06-22");
+    it("creates a User when the 18th birthday was in an earlier month this year", () => {
+      const birthDate = birthdateRelativeToToday(-18, -1);
 
-      expect(() =>
-        User.create({ ...baseParams, birthDate, createdAt: reference }),
-      ).not.toThrow();
+      expect(() => User.create({ ...baseParams, birthDate })).not.toThrow();
     });
 
-    it("throws when birth month is later than the reference month in the 18th year", () => {
-      const birthDate = IsoDate.of("2008-12-01");
-      const reference = IsoDate.of("2026-06-22");
+    it("throws when the 18th birthday falls in a later month this year", () => {
+      const birthDate = birthdateRelativeToToday(-18, +1);
 
-      expect(() =>
-        User.create({ ...baseParams, birthDate, createdAt: reference }),
-      ).toThrow();
+      expect(() => User.create({ ...baseParams, birthDate })).toThrow();
     });
 
     it("freezes the created instance", () => {
@@ -86,7 +116,7 @@ describe("User", () => {
     it("returns a new User with the updated name", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
-      const updatedAt = IsoDate.of("2026-06-23");
+      const updatedAt = IsoDate.of("2026-06-25");
 
       const updated = user.updateName(newName, updatedAt);
 
@@ -98,7 +128,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
 
-      user.updateName(newName, IsoDate.of("2026-06-23"));
+      user.updateName(newName, IsoDate.of("2026-06-25"));
 
       expect(user.fullName).toBe(validFullName);
     });
@@ -106,7 +136,7 @@ describe("User", () => {
     it("preserves all other fields", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
-      const updatedAt = IsoDate.of("2026-06-23");
+      const updatedAt = IsoDate.of("2026-06-25");
 
       const updated = user.updateName(newName, updatedAt);
 
@@ -120,7 +150,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const updated = user.updateName(
         FullName.of("Fabio Santos"),
-        IsoDate.of("2026-06-23"),
+        IsoDate.of("2026-06-25"),
       );
 
       expect(Object.isFrozen(updated)).toBe(true);
@@ -131,7 +161,7 @@ describe("User", () => {
     it("returns a new User with the updated email", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
-      const updatedAt = IsoDate.of("2026-06-23");
+      const updatedAt = IsoDate.of("2026-06-25");
 
       const updated = user.updateEmail(newEmail, updatedAt);
 
@@ -143,7 +173,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
 
-      user.updateEmail(newEmail, IsoDate.of("2026-06-23"));
+      user.updateEmail(newEmail, IsoDate.of("2026-06-25"));
 
       expect(user.email).toBe(validEmail);
     });
@@ -151,7 +181,7 @@ describe("User", () => {
     it("preserves all other fields", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
-      const updatedAt = IsoDate.of("2026-06-23");
+      const updatedAt = IsoDate.of("2026-06-25");
 
       const updated = user.updateEmail(newEmail, updatedAt);
 
@@ -165,7 +195,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const updated = user.updateEmail(
         Email.of("fabio.reis@example.com"),
-        IsoDate.of("2026-06-23"),
+        IsoDate.of("2026-06-25"),
       );
 
       expect(Object.isFrozen(updated)).toBe(true);
@@ -187,7 +217,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const otherUser = User.create({
         ...baseParams,
-        id: Uuid.of<"User">("7c9e6679-7425-40de-944b-e07fc1f90ae7"),
+        id: Id.of<"User">("7c9e6679-7425-40de-944b-e07fc1f90ae7"),
       });
 
       expect(user.equals(otherUser)).toBe(false);
