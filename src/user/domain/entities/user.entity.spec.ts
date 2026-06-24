@@ -36,6 +36,33 @@ describe("User", () => {
     updatedAt: auditDate,
   };
 
+  describe("reconstitute", () => {
+    it("restores a User from persisted state", () => {
+      const user = User.reconstitute(baseParams);
+
+      expect(user.id).toBe(validId);
+      expect(user.fullName).toBe(validFullName);
+      expect(user.email).toBe(validEmail);
+      expect(user.birthDate).toBe(adultBirthDate);
+      expect(user.createdAt).toBe(auditDate);
+      expect(user.updatedAt).toBe(auditDate);
+    });
+
+    it("does not enforce the minimum age invariant", () => {
+      const underageBirthDate = birthdateRelativeToToday(-17);
+
+      expect(() =>
+        User.reconstitute({ ...baseParams, birthDate: underageBirthDate }),
+      ).not.toThrow();
+    });
+
+    it("freezes the reconstituted instance", () => {
+      const user = User.reconstitute(baseParams);
+
+      expect(Object.isFrozen(user)).toBe(true);
+    });
+  });
+
   describe("create", () => {
     it("creates a User when the user is over 18", () => {
       const user = User.create(baseParams);

@@ -22,6 +22,24 @@ export class User {
     Object.freeze(this);
   }
 
+  static reconstitute(params: {
+    id: UserId;
+    fullName: FullName;
+    email: Email;
+    birthDate: IsoDate;
+    createdAt: IsoDate;
+    updatedAt: IsoDate;
+  }): User {
+    return new User(
+      params.id,
+      params.fullName,
+      params.email,
+      params.birthDate,
+      params.createdAt,
+      params.updatedAt,
+    );
+  }
+
   static create(params: {
     id: UserId;
     fullName: FullName;
