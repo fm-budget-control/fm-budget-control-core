@@ -22,6 +22,24 @@ export class User {
     Object.freeze(this);
   }
 
+  static reconstitute(params: {
+    id: UserId;
+    fullName: FullName;
+    email: Email;
+    birthDate: IsoDate;
+    createdAt: IsoDate;
+    updatedAt: IsoDate;
+  }): User {
+    return new User(
+      params.id,
+      params.fullName,
+      params.email,
+      params.birthDate,
+      params.createdAt,
+      params.updatedAt,
+    );
+  }
+
   static create(params: {
     id: UserId;
     fullName: FullName;
@@ -30,7 +48,7 @@ export class User {
     createdAt: IsoDate;
     updatedAt: IsoDate;
   }): User {
-    if (!User.isAbove18(params.birthDate, params.createdAt)) {
+    if (!User.isAbove18(params.birthDate)) {
       throw new TypeError("User must be at least 18 years old to register");
     }
 
@@ -74,25 +92,12 @@ export class User {
     return other instanceof User && this.id.equals(other.id);
   }
 
-  /**
-   * Checks whether `birthDate` is at least `MINIMUM_AGE_YEARS` years before
-   * `referenceDate`.
-   *
-   * Goes through `IsoDate.toUTCDate()` rather than `new Date(value)`
-   * directly, per the contract documented on `IsoDate` — date-only ISO
-   * strings happen to parse as UTC midnight under the current spec, but
-   * relying on that here would duplicate a guarantee `IsoDate` already
-   * owns, rather than reusing it.
-   */
-  private static isAbove18(
-    birthDate: IsoDate,
-    referenceDate: IsoDate,
-  ): boolean {
+  private static isAbove18(birthDate: IsoDate): boolean {
     const birth = birthDate.toUTCDate();
-    const reference = referenceDate.toUTCDate();
-    const age = reference.getUTCFullYear() - birth.getUTCFullYear();
-    const monthDiff = reference.getUTCMonth() - birth.getUTCMonth();
-    const dayDiff = reference.getUTCDate() - birth.getUTCDate();
+    const today = new Date();
+    const age = today.getUTCFullYear() - birth.getUTCFullYear();
+    const monthDiff = today.getUTCMonth() - birth.getUTCMonth();
+    const dayDiff = today.getUTCDate() - birth.getUTCDate();
 
     return (
       age > MINIMUM_AGE_YEARS ||
