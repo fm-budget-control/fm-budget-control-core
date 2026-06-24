@@ -1,14 +1,14 @@
-import { Uuid } from "./uuid.vo.js";
+import { Id } from "./id.vo.js";
 
-type UserId = Uuid<"UserId">;
-type AccountId = Uuid<"AccountId">;
-type TransactionId = Uuid<"TransactionId">;
+type UserId = Id<"UserId">;
+type AccountId = Id<"AccountId">;
+type TransactionId = Id<"TransactionId">;
 
-const validUuid = "550e8400-e29b-41d4-a716-446655440000";
+const validId = "550e8400-e29b-41d4-a716-446655440000";
 
-const userId: UserId = Uuid.of<"UserId">(validUuid);
-const accountId: AccountId = Uuid.of<"AccountId">(validUuid);
-const transactionId: TransactionId = Uuid.of<"TransactionId">(validUuid);
+const userId: UserId = Id.of<"UserId">(validId);
+const accountId: AccountId = Id.of<"AccountId">(validId);
+const transactionId: TransactionId = Id.of<"TransactionId">(validId);
 
 const acceptsUserId = (id: UserId): UserId => id;
 const acceptsAccountId = (id: AccountId): AccountId => id;
@@ -38,10 +38,10 @@ void (userId satisfies AccountId);
 
 void (accountId satisfies UserId);
 
-const unbrandedUuid = Uuid.of(validUuid);
+const unbrandedId = Id.of(validId);
 
-// @ts-expect-error Unbranded UUID must not be assignable to UserId.
-acceptsUserId(unbrandedUuid);
+// @ts-expect-error Unbranded Id must not be assignable to UserId.
+acceptsUserId(unbrandedId);
 
 // Cross-brand equality is intentionally allowed because equality compares values,
 // not domain identity categories.

@@ -1,9 +1,9 @@
 import { User } from "./user.entity.js";
 import { FullName, Email, UserId } from "../value-objects/index.js";
-import { IsoDate, Uuid } from "../../../kernel/domain/value-objects/index.js";
+import { IsoDate, Id } from "../../../kernel/domain/value-objects/index.js";
 
 describe("User", () => {
-  const validId: UserId = Uuid.of<"User">(
+  const validId: UserId = Id.of<"User">(
     "550e8400-e29b-41d4-a716-446655440000",
   );
   const validFullName = FullName.of("Fabio Reis");
@@ -187,7 +187,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const otherUser = User.create({
         ...baseParams,
-        id: Uuid.of<"User">("7c9e6679-7425-40de-944b-e07fc1f90ae7"),
+        id: Id.of<"User">("7c9e6679-7425-40de-944b-e07fc1f90ae7"),
       });
 
       expect(user.equals(otherUser)).toBe(false);
