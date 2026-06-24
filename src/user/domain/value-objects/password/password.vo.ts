@@ -16,7 +16,7 @@ export class InvalidPasswordError extends TypeError {
  * Represents a validated plaintext password, held only long enough to be
  * handed to an AuthServicePort for hashing. Unlike other kernel/domain VOs,
  * the raw value is intentionally NOT exposed as a public field — `value`
- * being public on Uuid/Email/FullName is fine since those aren't secrets;
+ * being public on Id/Email/FullName is fine since those aren't secrets;
  * here it would defeat the point of having a VO at all. Use
  * `revealForHashing()` at the one call site that actually needs the
  * plaintext, never `.value`.
