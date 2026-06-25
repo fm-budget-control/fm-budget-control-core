@@ -1,7 +1,13 @@
-import type { UserId } from "../../domain/value-objects/index.js";
-import type { User } from "../../domain/entities/user.entity.js";
+export type UserRecord = {
+  id: string;
+  fullName: string;
+  email: string;
+  birthDate: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export interface UserRepositoryPort {
-  existsById(id: UserId): Promise<boolean>;
-  save(user: User): Promise<void>;
+  existsById(id: string): Promise<boolean>;
+  save(record: UserRecord): Promise<void>;
 }

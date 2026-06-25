@@ -5,8 +5,6 @@ import { RegisterUserCommand } from "./register-user.command.js";
 import { UserRepositoryPort } from "../../ports/user-repository.port.js";
 import { AuthProviderPort } from "../../ports/auth-provider.port.js";
 import { UserIdDeriverPort } from "../../ports/user-id-deriver.port.js";
-import { UserId } from "../../../domain/value-objects/index.js";
-import { Id } from "../../../../kernel/domain/value-objects/index.js";
 
 describe("RegisterUserUseCase", () => {
   let userRepository: jest.Mocked<UserRepositoryPort>;
@@ -14,9 +12,7 @@ describe("RegisterUserUseCase", () => {
   let userIdDeriver: jest.Mocked<UserIdDeriverPort>;
   let useCase: RegisterUserUseCase;
 
-  const derivedId: UserId = Id.of<"User">(
-    "b94f6f125179506e18ede0af38a7b3c44c3f4b8b40efceae50a3f77b22c8c7d2",
-  );
+  const derivedId = "b94f6f125179506e18ede0af38a7b3c44c3f4b8b40efceae50a3f77b22c8c7d2";
 
   const validCommand: RegisterUserCommand = {
     fullName: "Fabio Reis",
@@ -50,40 +46,37 @@ describe("RegisterUserUseCase", () => {
       userRepository.save.mockResolvedValue(undefined);
     });
 
-    it("returns the id provided by the deriver", async () => {
+    it("returns the derived id as a string", async () => {
       const id = await useCase.execute(validCommand);
 
       expect(id).toBe(derivedId);
     });
 
-    it("derives the id from the parsed email", async () => {
+    it("derives the id from the normalised email value", async () => {
       await useCase.execute(validCommand);
 
-      expect(userIdDeriver.derive).toHaveBeenCalledTimes(1);
-      expect(userIdDeriver.derive).toHaveBeenCalledWith(
-        expect.objectContaining({ value: "fabio@example.com" }),
-      );
+      expect(userIdDeriver.derive).toHaveBeenCalledWith("fabio@example.com");
     });
 
-    it("checks db existence before writing anything", async () => {
+    it("checks db existence with the raw id string", async () => {
       await useCase.execute(validCommand);
 
       expect(userRepository.existsById).toHaveBeenCalledWith(derivedId);
     });
 
-    it("checks auth existence before calling createAccount", async () => {
+    it("checks auth existence with the raw id string", async () => {
       await useCase.execute(validCommand);
 
       expect(authProvider.accountExistsById).toHaveBeenCalledWith(derivedId);
     });
 
-    it("calls createAccount with the derived id, parsed email, and password VO", async () => {
+    it("calls createAccount with plain string values", async () => {
       await useCase.execute(validCommand);
 
       expect(authProvider.createAccount).toHaveBeenCalledWith(
         derivedId,
-        expect.objectContaining({ value: "fabio@example.com" }),
-        expect.anything(),
+        "fabio@example.com",
+        "P@ssw0rd1",
       );
     });
 
@@ -207,13 +200,12 @@ describe("RegisterUserUseCase", () => {
       expect(userRepository.save).toHaveBeenCalledTimes(1);
     });
 
-    it("updates the password to honour the latest submission", async () => {
+    it("updates the password with the plain string value", async () => {
       await useCase.execute(validCommand);
 
-      expect(authProvider.updatePassword).toHaveBeenCalledTimes(1);
       expect(authProvider.updatePassword).toHaveBeenCalledWith(
         derivedId,
-        expect.anything(),
+        "P@ssw0rd1",
       );
     });
 
