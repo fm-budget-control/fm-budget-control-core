@@ -70,7 +70,7 @@ export class IsoDateTime {
     const date = new Date(value);
 
     return (
-      !isNaN(date.getTime()) &&
+      !Number.isNaN(date.getTime()) &&
       date.getUTCFullYear() === year &&
       date.getUTCMonth() + 1 === month &&
       date.getUTCDate() === day
