@@ -131,16 +131,41 @@ describe("RegisterUserUseCase", () => {
       expect(userIdDeriver.derive).not.toHaveBeenCalled();
     });
 
-    it("throws when user is underage without calling save", async () => {
+    it("trims whitespace from fullName", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
       userRepository.existsById.mockResolvedValue(false);
       authProvider.accountExistsById.mockResolvedValue(false);
       authProvider.createAccount.mockResolvedValue(undefined);
+      userRepository.save.mockResolvedValue(undefined);
+
+      await expect(
+        useCase.execute({ ...validCommand, fullName: "  Fabio Reis  " }),
+      ).resolves.toBeDefined();
+    });
+
+    it("trims whitespace from birthDate", async () => {
+      userIdDeriver.derive.mockResolvedValue(derivedId);
+      userRepository.existsById.mockResolvedValue(false);
+      authProvider.accountExistsById.mockResolvedValue(false);
+      authProvider.createAccount.mockResolvedValue(undefined);
+      userRepository.save.mockResolvedValue(undefined);
+
+      await expect(
+        useCase.execute({ ...validCommand, birthDate: "  1990-01-01  " }),
+      ).resolves.toBeDefined();
+    });
+
+    it("throws when user is underage without calling any auth port", async () => {
+      userIdDeriver.derive.mockResolvedValue(derivedId);
+      userRepository.existsById.mockResolvedValue(false);
 
       await expect(
         useCase.execute({ ...validCommand, birthDate: "2020-01-01" }),
       ).rejects.toThrow("User must be at least 18 years old to register");
 
+      expect(authProvider.accountExistsById).not.toHaveBeenCalled();
+      expect(authProvider.createAccount).not.toHaveBeenCalled();
+      expect(authProvider.updatePassword).not.toHaveBeenCalled();
       expect(userRepository.save).not.toHaveBeenCalled();
     });
   });

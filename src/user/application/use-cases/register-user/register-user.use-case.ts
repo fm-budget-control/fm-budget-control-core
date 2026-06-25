@@ -15,23 +15,15 @@ export class RegisterUserUseCase {
   ) {}
 
   async execute(command: RegisterUserCommand): Promise<UserId> {
-    const fullName = FullName.of(command.fullName);
+    const fullName = FullName.parse(command.fullName);
     const email = Email.parse(command.email);
-    const birthDate = IsoDate.of(command.birthDate);
+    const birthDate = IsoDate.parse(command.birthDate);
     const password = Password.of(command.password);
 
     const id = await this.userIdDeriver.derive(email);
 
     if (await this.userRepository.existsById(id)) {
       throw new EmailAlreadyRegisteredError();
-    }
-
-    const authExists = await this.authProvider.accountExistsById(id);
-
-    if (authExists) {
-      await this.authProvider.updatePassword(id, password);
-    } else {
-      await this.authProvider.createAccount(id, email, password);
     }
 
     const now = IsoDateTime.of(new Date().toISOString());
@@ -44,6 +36,14 @@ export class RegisterUserUseCase {
       createdAt: now,
       updatedAt: now,
     });
+
+    const authExists = await this.authProvider.accountExistsById(id);
+
+    if (authExists) {
+      await this.authProvider.updatePassword(id, password);
+    } else {
+      await this.authProvider.createAccount(id, email, password);
+    }
 
     await this.userRepository.save(user);
 
