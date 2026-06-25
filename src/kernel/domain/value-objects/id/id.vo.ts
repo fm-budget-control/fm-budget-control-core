@@ -7,6 +7,15 @@ export class InvalidIdError extends TypeError {
   }
 }
 
+/**
+ * Opaque phantom-branded identifier.
+ *
+ * Accepts any non-empty, non-whitespace-only string. No format, length, or
+ * case constraints are applied. `equals` compares values with strict equality,
+ * so comparison is case-sensitive. If the underlying identifier system is
+ * case-insensitive (e.g. UUID columns), normalise to a canonical form before
+ * constructing an Id — that is the adapter's responsibility, not the domain's.
+ */
 export class Id<TBrand = unknown> {
   declare private readonly [idBrand]: TBrand;
 
@@ -43,7 +52,7 @@ export class Id<TBrand = unknown> {
   }
 
   static isValid(value: string): boolean {
-    return value.length > 0;
+    return value.trim().length > 0;
   }
 
   private static normalize(value: string): string {

@@ -1,24 +1,20 @@
+import { jest, beforeAll, afterAll } from "@jest/globals";
 import { User } from "./user.entity.js";
 import { FullName, Email, UserId } from "../value-objects/index.js";
 import { IsoDate, IsoDateTime, Id } from "../../../kernel/domain/value-objects/index.js";
 
-function birthdateRelativeToToday(
-  yearOffset: number,
-  monthOffset: number = 0,
-  dayOffset: number = 0,
-): IsoDate {
-  const today = new Date();
-  const d = new Date(
-    Date.UTC(
-      today.getUTCFullYear() + yearOffset,
-      today.getUTCMonth() + monthOffset,
-      today.getUTCDate() + dayOffset,
-    ),
-  );
-  return IsoDate.of(d.toISOString().slice(0, 10));
-}
+const PINNED_TODAY = "2026-06-24";
 
 describe("User", () => {
+  beforeAll(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(`${PINNED_TODAY}T12:00:00Z`));
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   const validId: UserId = Id.of<"User">(
     "550e8400-e29b-41d4-a716-446655440000",
   );
@@ -49,7 +45,7 @@ describe("User", () => {
     });
 
     it("does not enforce the minimum age invariant", () => {
-      const underageBirthDate = birthdateRelativeToToday(-17);
+      const underageBirthDate = IsoDate.of("2009-06-24"); // 17 on PINNED_TODAY
 
       expect(() =>
         User.reconstitute({ ...baseParams, birthDate: underageBirthDate }),
@@ -72,13 +68,13 @@ describe("User", () => {
     });
 
     it("creates a User when the user turns 18 exactly today", () => {
-      const birthDate = birthdateRelativeToToday(-18);
+      const birthDate = IsoDate.of("2008-06-24"); // exactly 18 on PINNED_TODAY
 
       expect(() => User.create({ ...baseParams, birthDate })).not.toThrow();
     });
 
     it("throws when the user turns 18 tomorrow", () => {
-      const birthDate = birthdateRelativeToToday(-18, 0, +1);
+      const birthDate = IsoDate.of("2008-06-25"); // turns 18 on 2026-06-25
 
       expect(() =>
         User.create({ ...baseParams, birthDate }),
@@ -86,25 +82,50 @@ describe("User", () => {
     });
 
     it("throws when the user is 17", () => {
-      const birthDate = birthdateRelativeToToday(-17);
+      const birthDate = IsoDate.of("2009-06-24"); // 17 on PINNED_TODAY
 
       expect(() => User.create({ ...baseParams, birthDate })).toThrow(TypeError);
     });
 
     it("creates a User when the 18th birthday was in an earlier month this year", () => {
-      const birthDate = birthdateRelativeToToday(-18, -1);
+      const birthDate = IsoDate.of("2008-05-24"); // turned 18 in May 2026
 
       expect(() => User.create({ ...baseParams, birthDate })).not.toThrow();
     });
 
     it("throws when the 18th birthday falls in a later month this year", () => {
-      const birthDate = birthdateRelativeToToday(-18, +1);
+      const birthDate = IsoDate.of("2008-07-24"); // turns 18 in July 2026
 
       expect(() => User.create({ ...baseParams, birthDate })).toThrow();
     });
 
     it("freezes the created instance", () => {
       expect(Object.isFrozen(User.create(baseParams))).toBe(true);
+    });
+
+    describe("leap-day birthday", () => {
+      beforeEach(() => {
+        jest.setSystemTime(new Date("2026-02-28T12:00:00Z"));
+      });
+
+      afterEach(() => {
+        jest.setSystemTime(new Date(`${PINNED_TODAY}T12:00:00Z`));
+      });
+
+      it("accepts a user born on Feb 29 when today is Feb 28 of their 18th non-leap year", () => {
+        const birthDate = IsoDate.of("2008-02-29");
+
+        expect(() => User.create({ ...baseParams, birthDate })).not.toThrow();
+      });
+
+      it("rejects a user born on Feb 29 when today is Feb 27 of their 18th non-leap year", () => {
+        jest.setSystemTime(new Date("2026-02-27T12:00:00Z"));
+        const birthDate = IsoDate.of("2008-02-29");
+
+        expect(() => User.create({ ...baseParams, birthDate })).toThrow(
+          "User must be at least 18 years old to register",
+        );
+      });
     });
   });
 

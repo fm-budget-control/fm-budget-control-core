@@ -92,13 +92,20 @@ export class User {
     const birth = birthDate.toUTCDate();
     const today = new Date();
     const age = today.getUTCFullYear() - birth.getUTCFullYear();
-    const monthDiff = today.getUTCMonth() - birth.getUTCMonth();
-    const dayDiff = today.getUTCDate() - birth.getUTCDate();
 
-    return (
-      age > MINIMUM_AGE_YEARS ||
-      (age === MINIMUM_AGE_YEARS &&
-        (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
-    );
+    if (age > MINIMUM_AGE_YEARS) return true;
+    if (age < MINIMUM_AGE_YEARS) return false;
+
+    // Clamp birth day to the last day of the birth month in the current year
+    // so that Feb 29 birthdays are treated as Feb 28 in non-leap years.
+    const lastDayOfBirthMonth = new Date(
+      Date.UTC(today.getUTCFullYear(), birth.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    const effectiveBirthDay = Math.min(birth.getUTCDate(), lastDayOfBirthMonth);
+
+    const monthDiff = today.getUTCMonth() - birth.getUTCMonth();
+    const dayDiff = today.getUTCDate() - effectiveBirthDay;
+
+    return monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0);
   }
 }
