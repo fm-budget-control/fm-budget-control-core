@@ -1,7 +1,7 @@
 import { jest, beforeAll, afterAll } from "@jest/globals";
 import { User } from "./user.entity.js";
 import { FullName, Email, UserId } from "../value-objects/index.js";
-import { IsoDate, Id } from "../../../kernel/domain/value-objects/index.js";
+import { IsoDate, IsoDateTime, Id } from "../../../kernel/domain/value-objects/index.js";
 
 const PINNED_TODAY = "2026-06-24";
 
@@ -21,15 +21,15 @@ describe("User", () => {
   const validFullName = FullName.of("Fabio Reis");
   const validEmail = Email.of("fabio@example.com");
   const adultBirthDate = IsoDate.of("1990-01-01");
-  const auditDate = IsoDate.of(PINNED_TODAY);
+  const auditDateTime = IsoDateTime.of("2026-06-24T12:00:00Z");
 
   const baseParams = {
     id: validId,
     fullName: validFullName,
     email: validEmail,
     birthDate: adultBirthDate,
-    createdAt: auditDate,
-    updatedAt: auditDate,
+    createdAt: auditDateTime,
+    updatedAt: auditDateTime,
   };
 
   describe("reconstitute", () => {
@@ -40,8 +40,8 @@ describe("User", () => {
       expect(user.fullName).toBe(validFullName);
       expect(user.email).toBe(validEmail);
       expect(user.birthDate).toBe(adultBirthDate);
-      expect(user.createdAt).toBe(auditDate);
-      expect(user.updatedAt).toBe(auditDate);
+      expect(user.createdAt).toBe(auditDateTime);
+      expect(user.updatedAt).toBe(auditDateTime);
     });
 
     it("does not enforce the minimum age invariant", () => {
@@ -53,9 +53,7 @@ describe("User", () => {
     });
 
     it("freezes the reconstituted instance", () => {
-      const user = User.reconstitute(baseParams);
-
-      expect(Object.isFrozen(user)).toBe(true);
+      expect(Object.isFrozen(User.reconstitute(baseParams))).toBe(true);
     });
   });
 
@@ -102,9 +100,7 @@ describe("User", () => {
     });
 
     it("freezes the created instance", () => {
-      const user = User.create(baseParams);
-
-      expect(Object.isFrozen(user)).toBe(true);
+      expect(Object.isFrozen(User.create(baseParams))).toBe(true);
     });
 
     describe("leap-day birthday", () => {
@@ -137,7 +133,7 @@ describe("User", () => {
     it("returns a new User with the updated name", () => {
       const user = User.create(baseParams);
       const newName = FullName.of("Fabio Santos");
-      const updatedAt = IsoDate.of("2026-06-25");
+      const updatedAt = IsoDateTime.of("2026-06-25T08:00:00Z");
 
       const updated = user.updateName(newName, updatedAt);
 
@@ -147,19 +143,18 @@ describe("User", () => {
 
     it("does not mutate the original instance", () => {
       const user = User.create(baseParams);
-      const newName = FullName.of("Fabio Santos");
 
-      user.updateName(newName, IsoDate.of("2026-06-25"));
+      user.updateName(FullName.of("Fabio Santos"), IsoDateTime.of("2026-06-25T08:00:00Z"));
 
       expect(user.fullName).toBe(validFullName);
     });
 
     it("preserves all other fields", () => {
       const user = User.create(baseParams);
-      const newName = FullName.of("Fabio Santos");
-      const updatedAt = IsoDate.of("2026-06-25");
-
-      const updated = user.updateName(newName, updatedAt);
+      const updated = user.updateName(
+        FullName.of("Fabio Santos"),
+        IsoDateTime.of("2026-06-25T08:00:00Z"),
+      );
 
       expect(updated.id).toBe(user.id);
       expect(updated.email).toBe(user.email);
@@ -171,7 +166,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const updated = user.updateName(
         FullName.of("Fabio Santos"),
-        IsoDate.of("2026-06-25"),
+        IsoDateTime.of("2026-06-25T08:00:00Z"),
       );
 
       expect(Object.isFrozen(updated)).toBe(true);
@@ -182,7 +177,7 @@ describe("User", () => {
     it("returns a new User with the updated email", () => {
       const user = User.create(baseParams);
       const newEmail = Email.of("fabio.reis@example.com");
-      const updatedAt = IsoDate.of("2026-06-25");
+      const updatedAt = IsoDateTime.of("2026-06-25T08:00:00Z");
 
       const updated = user.updateEmail(newEmail, updatedAt);
 
@@ -192,19 +187,18 @@ describe("User", () => {
 
     it("does not mutate the original instance", () => {
       const user = User.create(baseParams);
-      const newEmail = Email.of("fabio.reis@example.com");
 
-      user.updateEmail(newEmail, IsoDate.of("2026-06-25"));
+      user.updateEmail(Email.of("fabio.reis@example.com"), IsoDateTime.of("2026-06-25T08:00:00Z"));
 
       expect(user.email).toBe(validEmail);
     });
 
     it("preserves all other fields", () => {
       const user = User.create(baseParams);
-      const newEmail = Email.of("fabio.reis@example.com");
-      const updatedAt = IsoDate.of("2026-06-25");
-
-      const updated = user.updateEmail(newEmail, updatedAt);
+      const updated = user.updateEmail(
+        Email.of("fabio.reis@example.com"),
+        IsoDateTime.of("2026-06-25T08:00:00Z"),
+      );
 
       expect(updated.id).toBe(user.id);
       expect(updated.fullName).toBe(user.fullName);
@@ -216,7 +210,7 @@ describe("User", () => {
       const user = User.create(baseParams);
       const updated = user.updateEmail(
         Email.of("fabio.reis@example.com"),
-        IsoDate.of("2026-06-25"),
+        IsoDateTime.of("2026-06-25T08:00:00Z"),
       );
 
       expect(Object.isFrozen(updated)).toBe(true);
@@ -245,15 +239,11 @@ describe("User", () => {
     });
 
     it("returns false when compared to null", () => {
-      const user = User.create(baseParams);
-
-      expect(user.equals(null)).toBe(false);
+      expect(User.create(baseParams).equals(null)).toBe(false);
     });
 
     it("returns false when compared to undefined", () => {
-      const user = User.create(baseParams);
-
-      expect(user.equals(undefined)).toBe(false);
+      expect(User.create(baseParams).equals(undefined)).toBe(false);
     });
 
     it("returns false when compared to a structurally similar non-User object", () => {
