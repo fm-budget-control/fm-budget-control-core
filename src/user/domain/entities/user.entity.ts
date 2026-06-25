@@ -1,6 +1,6 @@
 import type { UserId } from "../value-objects/index.js";
 import { FullName, Email } from "../value-objects/index.js";
-import { IsoDate } from "../../../kernel/domain/value-objects/index.js";
+import { IsoDate, IsoDateTime } from "../../../kernel/domain/value-objects/index.js";
 
 /**
  * Minimum age, in years, required to register. Enforced on creation only —
@@ -16,8 +16,8 @@ export class User {
     public readonly fullName: FullName,
     public readonly email: Email,
     public readonly birthDate: IsoDate,
-    public readonly createdAt: IsoDate,
-    public readonly updatedAt: IsoDate,
+    public readonly createdAt: IsoDateTime,
+    public readonly updatedAt: IsoDateTime,
   ) {
     Object.freeze(this);
   }
@@ -27,8 +27,8 @@ export class User {
     fullName: FullName;
     email: Email;
     birthDate: IsoDate;
-    createdAt: IsoDate;
-    updatedAt: IsoDate;
+    createdAt: IsoDateTime;
+    updatedAt: IsoDateTime;
   }): User {
     return new User(
       params.id,
@@ -45,8 +45,8 @@ export class User {
     fullName: FullName;
     email: Email;
     birthDate: IsoDate;
-    createdAt: IsoDate;
-    updatedAt: IsoDate;
+    createdAt: IsoDateTime;
+    updatedAt: IsoDateTime;
   }): User {
     if (!User.isAbove18(params.birthDate)) {
       throw new TypeError("User must be at least 18 years old to register");
@@ -62,7 +62,7 @@ export class User {
     );
   }
 
-  updateName(newName: FullName, updatedAt: IsoDate): User {
+  updateName(newName: FullName, updatedAt: IsoDateTime): User {
     return new User(
       this.id,
       newName,
@@ -73,7 +73,7 @@ export class User {
     );
   }
 
-  updateEmail(newEmail: Email, updatedAt: IsoDate): User {
+  updateEmail(newEmail: Email, updatedAt: IsoDateTime): User {
     return new User(
       this.id,
       this.fullName,
@@ -84,10 +84,6 @@ export class User {
     );
   }
 
-  /**
-   * Identity equality — two Users are equal if they represent the same
-   * aggregate, regardless of which fields currently differ in value.
-   */
   equals(other: unknown): boolean {
     return other instanceof User && this.id.equals(other.id);
   }
