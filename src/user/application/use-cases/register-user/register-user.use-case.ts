@@ -1,6 +1,6 @@
-import { FullName, Email, Password, UserId } from "../../../domain/value-objects/index.js";
+import { FullName, Email, Password } from "../../../domain/value-objects/index.js";
 import { User } from "../../../domain/entities/user.entity.js";
-import { IsoDate, IsoDateTime } from "../../../../kernel/domain/value-objects/index.js";
+import { IsoDate, IsoDateTime, Id } from "../../../../kernel/domain/value-objects/index.js";
 import { UserRepositoryPort } from "../../ports/user-repository.port.js";
 import { AuthProviderPort } from "../../ports/auth-provider.port.js";
 import { UserIdDeriverPort } from "../../ports/user-id-deriver.port.js";
@@ -14,15 +14,16 @@ export class RegisterUserUseCase {
     private readonly userIdDeriver: UserIdDeriverPort,
   ) {}
 
-  async execute(command: RegisterUserCommand): Promise<UserId> {
+  async execute(command: RegisterUserCommand): Promise<string> {
     const fullName = FullName.parse(command.fullName);
     const email = Email.parse(command.email);
     const birthDate = IsoDate.parse(command.birthDate);
     const password = Password.of(command.password);
 
-    const id = await this.userIdDeriver.derive(email);
+    const rawId = await this.userIdDeriver.derive(email.value);
+    const id = Id.of<"User">(rawId);
 
-    if (await this.userRepository.existsById(id)) {
+    if (await this.userRepository.existsById(rawId)) {
       throw new EmailAlreadyRegisteredError();
     }
 
@@ -37,16 +38,23 @@ export class RegisterUserUseCase {
       updatedAt: now,
     });
 
-    const authExists = await this.authProvider.accountExistsById(id);
+    const authExists = await this.authProvider.accountExistsById(rawId);
 
     if (authExists) {
-      await this.authProvider.updatePassword(id, password);
+      await this.authProvider.updatePassword(rawId, password.revealForHashing());
     } else {
-      await this.authProvider.createAccount(id, email, password);
+      await this.authProvider.createAccount(rawId, email.value, password.revealForHashing());
     }
 
-    await this.userRepository.save(user);
+    await this.userRepository.save({
+      id: user.id.value,
+      fullName: user.fullName.value,
+      email: user.email.value,
+      birthDate: user.birthDate.value,
+      createdAt: user.createdAt.value,
+      updatedAt: user.updatedAt.value,
+    });
 
-    return user.id;
+    return user.id.value;
   }
 }
