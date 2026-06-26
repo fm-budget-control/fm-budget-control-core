@@ -209,6 +209,27 @@ describe("IsoDateTime", () => {
     });
   });
 
+  describe("toEpochMs", () => {
+    it("returns the number of milliseconds since the Unix epoch", () => {
+      const dt = IsoDateTime.of("2026-06-24T12:00:00Z");
+
+      expect(dt.toEpochMs()).toBe(new Date("2026-06-24T12:00:00Z").getTime());
+    });
+
+    it("accounts for milliseconds in the value", () => {
+      const dt = IsoDateTime.of("2026-06-24T12:00:00.123Z");
+
+      expect(dt.toEpochMs()).toBe(new Date("2026-06-24T12:00:00.123Z").getTime());
+    });
+
+    it("returns a smaller value for an earlier datetime", () => {
+      const earlier = IsoDateTime.of("2026-06-24T10:00:00Z");
+      const later = IsoDateTime.of("2026-06-24T11:00:00Z");
+
+      expect(earlier.toEpochMs()).toBeLessThan(later.toEpochMs());
+    });
+  });
+
   describe("toIsoDate", () => {
     it("returns the calendar date part of the datetime", () => {
       const dt = IsoDateTime.of("2026-06-24T23:59:59Z");

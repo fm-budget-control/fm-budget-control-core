@@ -41,11 +41,13 @@ export class Email {
   }
 
   static tryParse(value: string): Email | null {
-    try {
-      return Email.parse(value);
-    } catch {
+    const normalized = Email.normalize(value);
+
+    if (!Email.isValid(normalized)) {
       return null;
     }
+
+    return new Email({ value: normalized });
   }
 
   static isValid(value: string): boolean {
