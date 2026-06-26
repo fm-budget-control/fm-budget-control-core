@@ -21,6 +21,13 @@ export class RegisterUserUseCase {
     const password = Password.of(command.password);
 
     const rawId = await this.userIdDeriver.derive(email.value);
+
+    if (!Id.isValid(rawId)) {
+      throw new TypeError(
+        `UserIdDeriverPort returned an invalid identifier: "${rawId}"`,
+      );
+    }
+
     const id = Id.of<"User">(rawId);
 
     if (await this.userRepository.existsById(rawId)) {

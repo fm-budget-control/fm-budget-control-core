@@ -10,6 +10,15 @@ import { IsoDate, IsoDateTime } from "../../../kernel/domain/value-objects/index
  */
 const MINIMUM_AGE_YEARS = 18;
 
+type UserParams = {
+  id: UserId;
+  fullName: FullName;
+  email: Email;
+  birthDate: IsoDate;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
 export class User {
   private constructor(
     public readonly id: UserId,
@@ -22,14 +31,7 @@ export class User {
     Object.freeze(this);
   }
 
-  static reconstitute(params: {
-    id: UserId;
-    fullName: FullName;
-    email: Email;
-    birthDate: IsoDate;
-    createdAt: IsoDateTime;
-    updatedAt: IsoDateTime;
-  }): User {
+  static reconstitute(params: UserParams): User {
     return new User(
       params.id,
       params.fullName,
@@ -40,14 +42,7 @@ export class User {
     );
   }
 
-  static create(params: {
-    id: UserId;
-    fullName: FullName;
-    email: Email;
-    birthDate: IsoDate;
-    createdAt: IsoDateTime;
-    updatedAt: IsoDateTime;
-  }): User {
+  static create(params: UserParams): User {
     if (!User.isAbove18(params.birthDate)) {
       throw new TypeError("User must be at least 18 years old to register");
     }

@@ -163,6 +163,22 @@ describe("RegisterUserUseCase", () => {
     });
   });
 
+  describe("invalid id from deriver", () => {
+    it("throws TypeError when deriver returns an empty string", async () => {
+      userIdDeriver.derive.mockResolvedValue("");
+
+      await expect(useCase.execute(validCommand)).rejects.toThrow(TypeError);
+      expect(userRepository.existsById).not.toHaveBeenCalled();
+    });
+
+    it("throws TypeError when deriver returns a whitespace-only string", async () => {
+      userIdDeriver.derive.mockResolvedValue("   ");
+
+      await expect(useCase.execute(validCommand)).rejects.toThrow(TypeError);
+      expect(userRepository.existsById).not.toHaveBeenCalled();
+    });
+  });
+
   describe("email already registered", () => {
     beforeEach(() => {
       userIdDeriver.derive.mockResolvedValue(derivedId);

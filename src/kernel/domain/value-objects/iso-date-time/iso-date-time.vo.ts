@@ -85,16 +85,20 @@ export class IsoDateTime {
     return new Date(this.value);
   }
 
+  toEpochMs(): number {
+    return new Date(this.value).getTime();
+  }
+
   toIsoDate(): IsoDate {
     return IsoDate.of(this.value.slice(0, 10));
   }
 
   isBefore(other: IsoDateTime): boolean {
-    return this.toUTCDate().getTime() < other.toUTCDate().getTime();
+    return this.toEpochMs() < other.toEpochMs();
   }
 
   isAfter(other: IsoDateTime): boolean {
-    return this.toUTCDate().getTime() > other.toUTCDate().getTime();
+    return this.toEpochMs() > other.toEpochMs();
   }
 
   equals(other: unknown): boolean {
