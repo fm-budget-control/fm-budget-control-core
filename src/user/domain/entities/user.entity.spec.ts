@@ -2,6 +2,7 @@ import { jest, beforeAll, afterAll } from "@jest/globals";
 import { User } from "./user.entity.js";
 import { FullName, Email, UserId } from "../value-objects/index.js";
 import { IsoDate, IsoDateTime, Id } from "../../../kernel/domain/value-objects/index.js";
+import { UnderageUserError } from "../errors/underage-user.error.js";
 
 const PINNED_TODAY = "2026-06-24";
 
@@ -78,13 +79,13 @@ describe("User", () => {
 
       expect(() =>
         User.create({ ...baseParams, birthDate }),
-      ).toThrow("User must be at least 18 years old to register");
+      ).toThrow(UnderageUserError);
     });
 
     it("throws when the user is 17", () => {
       const birthDate = IsoDate.of("2009-06-24"); // 17 on PINNED_TODAY
 
-      expect(() => User.create({ ...baseParams, birthDate })).toThrow(TypeError);
+      expect(() => User.create({ ...baseParams, birthDate })).toThrow(UnderageUserError);
     });
 
     it("creates a User when the 18th birthday was in an earlier month this year", () => {
@@ -96,7 +97,7 @@ describe("User", () => {
     it("throws when the 18th birthday falls in a later month this year", () => {
       const birthDate = IsoDate.of("2008-07-24"); // turns 18 in July 2026
 
-      expect(() => User.create({ ...baseParams, birthDate })).toThrow();
+      expect(() => User.create({ ...baseParams, birthDate })).toThrow(UnderageUserError);
     });
 
     it("freezes the created instance", () => {
@@ -122,9 +123,7 @@ describe("User", () => {
         jest.setSystemTime(new Date("2026-02-27T12:00:00Z"));
         const birthDate = IsoDate.of("2008-02-29");
 
-        expect(() => User.create({ ...baseParams, birthDate })).toThrow(
-          "User must be at least 18 years old to register",
-        );
+        expect(() => User.create({ ...baseParams, birthDate })).toThrow(UnderageUserError);
       });
     });
   });

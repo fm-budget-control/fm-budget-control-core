@@ -5,6 +5,7 @@ import { RegisterUserCommand } from "./register-user.command.js";
 import { UserRepositoryPort } from "../../ports/user-repository.port.js";
 import { AuthProviderPort } from "../../ports/auth-provider.port.js";
 import { UserIdDeriverPort } from "../../ports/user-id-deriver.port.js";
+import { UnderageUserError } from "../../../domain/errors/underage-user.error.js";
 
 describe("RegisterUserUseCase", () => {
   let userRepository: jest.Mocked<UserRepositoryPort>;
@@ -154,7 +155,7 @@ describe("RegisterUserUseCase", () => {
 
       await expect(
         useCase.execute({ ...validCommand, birthDate: "2020-01-01" }),
-      ).rejects.toThrow("User must be at least 18 years old to register");
+      ).rejects.toThrow(UnderageUserError);
 
       expect(authProvider.accountExistsById).not.toHaveBeenCalled();
       expect(authProvider.createAccount).not.toHaveBeenCalled();

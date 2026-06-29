@@ -1,6 +1,7 @@
 import type { UserId } from "../value-objects/index.js";
 import { FullName, Email } from "../value-objects/index.js";
 import { IsoDate, IsoDateTime } from "../../../kernel/domain/value-objects/index.js";
+import { UnderageUserError } from "../errors/underage-user.error.js";
 
 /**
  * Minimum age, in years, required to register. Enforced on creation only —
@@ -44,7 +45,7 @@ export class User {
 
   static create(params: UserParams): User {
     if (!User.isAbove18(params.birthDate)) {
-      throw new TypeError("User must be at least 18 years old to register");
+      throw new UnderageUserError();
     }
 
     return new User(
