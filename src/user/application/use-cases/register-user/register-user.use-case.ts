@@ -1,9 +1,9 @@
 import { FullName, Email, Password } from "../../../domain/value-objects/index.js";
 import { User } from "../../../domain/entities/user.entity.js";
 import { IsoDate, IsoDateTime, Id } from "../../../../kernel/domain/value-objects/index.js";
+import { HmacIdDeriverPort } from "../../../../kernel/application/ports/hmac-id-deriver.port.js";
 import { UserRepositoryPort } from "../../ports/user-repository.port.js";
 import { AuthProviderPort } from "../../ports/auth-provider.port.js";
-import { UserIdDeriverPort } from "../../ports/user-id-deriver.port.js";
 import { RegisterUserCommand } from "./register-user.command.js";
 import { EmailAlreadyRegisteredError } from "./register-user.errors.js";
 
@@ -11,7 +11,7 @@ export class RegisterUserUseCase {
   constructor(
     private readonly userRepository: UserRepositoryPort,
     private readonly authProvider: AuthProviderPort,
-    private readonly userIdDeriver: UserIdDeriverPort,
+    private readonly userIdDeriver: HmacIdDeriverPort,
   ) {}
 
   async execute(command: RegisterUserCommand): Promise<string> {
@@ -24,7 +24,7 @@ export class RegisterUserUseCase {
 
     if (!Id.isValid(rawId)) {
       throw new TypeError(
-        `UserIdDeriverPort returned an invalid identifier: "${rawId}"`,
+        `HmacIdDeriverPort returned an invalid identifier: "${rawId}"`,
       );
     }
 

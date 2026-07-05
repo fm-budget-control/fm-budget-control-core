@@ -4,13 +4,13 @@ import { EmailAlreadyRegisteredError } from "./register-user.errors.js";
 import { RegisterUserCommand } from "./register-user.command.js";
 import { UserRepositoryPort } from "../../ports/user-repository.port.js";
 import { AuthProviderPort } from "../../ports/auth-provider.port.js";
-import { UserIdDeriverPort } from "../../ports/user-id-deriver.port.js";
+import { HmacIdDeriverPort } from "../../../../kernel/application/ports/hmac-id-deriver.port.js";
 import { UnderageUserError } from "../../../domain/errors/underage-user.error.js";
 
 describe("RegisterUserUseCase", () => {
   let userRepository: jest.Mocked<UserRepositoryPort>;
   let authProvider: jest.Mocked<AuthProviderPort>;
-  let userIdDeriver: jest.Mocked<UserIdDeriverPort>;
+  let userIdDeriver: jest.Mocked<HmacIdDeriverPort>;
   let useCase: RegisterUserUseCase;
 
   const derivedId = "b94f6f125179506e18ede0af38a7b3c44c3f4b8b40efceae50a3f77b22c8c7d2";
@@ -33,7 +33,7 @@ describe("RegisterUserUseCase", () => {
       updatePassword: jest.fn<AuthProviderPort["updatePassword"]>(),
     };
     userIdDeriver = {
-      derive: jest.fn<UserIdDeriverPort["derive"]>(),
+      derive: jest.fn<HmacIdDeriverPort["derive"]>(),
     };
     useCase = new RegisterUserUseCase(userRepository, authProvider, userIdDeriver);
   });
