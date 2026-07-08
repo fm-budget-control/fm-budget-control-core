@@ -1,5 +1,10 @@
+export type CreateAccountResult = "created" | "email-already-exists";
+
 export interface AuthProviderPort {
-  accountExistsById(id: string): Promise<boolean>;
-  createAccount(id: string, email: string, password: string): Promise<void>;
-  updatePassword(id: string, password: string): Promise<void>;
+  createAccount(params: {
+    id: string;
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<CreateAccountResult>;
 }

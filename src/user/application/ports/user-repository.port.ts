@@ -7,7 +7,8 @@ export type UserRecord = {
   updatedAt: string;
 };
 
+export type CreateProfileResult = "created" | "already-exists";
+
 export interface UserRepositoryPort {
-  existsById(id: string): Promise<boolean>;
-  save(record: UserRecord): Promise<void>;
+  createProfile(record: UserRecord): Promise<CreateProfileResult>;
 }
