@@ -30,10 +30,6 @@ export class RegisterUserUseCase {
 
     const id = Id.of<"User">(rawId);
 
-    if (await this.userRepository.existsById(rawId)) {
-      throw new EmailAlreadyRegisteredError();
-    }
-
     const now = IsoDateTime.of(new Date().toISOString());
 
     const user = User.create({
@@ -45,15 +41,16 @@ export class RegisterUserUseCase {
       updatedAt: now,
     });
 
-    const authExists = await this.authProvider.accountExistsById(rawId);
+    // "email-already-exists" means a previous attempt created the auth
+    // account but not the profile — resume by creating the profile.
+    await this.authProvider.createAccount({
+      id: user.id.value,
+      email: user.email.value,
+      password: password.revealForHashing(),
+      displayName: user.fullName.value,
+    });
 
-    if (authExists) {
-      await this.authProvider.updatePassword(rawId, password.revealForHashing());
-    } else {
-      await this.authProvider.createAccount(rawId, email.value, password.revealForHashing());
-    }
-
-    await this.userRepository.save({
+    const profileResult = await this.userRepository.createProfile({
       id: user.id.value,
       fullName: user.fullName.value,
       email: user.email.value,
@@ -61,6 +58,10 @@ export class RegisterUserUseCase {
       createdAt: user.createdAt.value,
       updatedAt: user.updatedAt.value,
     });
+
+    if (profileResult === "already-exists") {
+      throw new EmailAlreadyRegisteredError();
+    }
 
     return user.id.value;
   }

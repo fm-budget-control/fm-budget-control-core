@@ -24,13 +24,10 @@ describe("RegisterUserUseCase", () => {
 
   beforeEach(() => {
     userRepository = {
-      existsById: jest.fn<UserRepositoryPort["existsById"]>(),
-      save: jest.fn<UserRepositoryPort["save"]>(),
+      createProfile: jest.fn<UserRepositoryPort["createProfile"]>(),
     };
     authProvider = {
-      accountExistsById: jest.fn<AuthProviderPort["accountExistsById"]>(),
       createAccount: jest.fn<AuthProviderPort["createAccount"]>(),
-      updatePassword: jest.fn<AuthProviderPort["updatePassword"]>(),
     };
     userIdDeriver = {
       derive: jest.fn<HmacIdDeriverPort["derive"]>(),
@@ -41,10 +38,8 @@ describe("RegisterUserUseCase", () => {
   describe("happy path", () => {
     beforeEach(() => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
-      authProvider.accountExistsById.mockResolvedValue(false);
-      authProvider.createAccount.mockResolvedValue(undefined);
-      userRepository.save.mockResolvedValue(undefined);
+      authProvider.createAccount.mockResolvedValue("created");
+      userRepository.createProfile.mockResolvedValue("created");
     });
 
     it("returns the derived id as a string", async () => {
@@ -59,36 +54,44 @@ describe("RegisterUserUseCase", () => {
       expect(userIdDeriver.derive).toHaveBeenCalledWith("fabio@example.com");
     });
 
-    it("checks db existence with the raw id string", async () => {
+    it("calls createAccount with plain string values and the full name as displayName", async () => {
       await useCase.execute(validCommand);
 
-      expect(userRepository.existsById).toHaveBeenCalledWith(derivedId);
+      expect(authProvider.createAccount).toHaveBeenCalledWith({
+        id: derivedId,
+        email: "fabio@example.com",
+        password: "P@ssw0rd1",
+        displayName: "Fabio Reis",
+      });
     });
 
-    it("checks auth existence with the raw id string", async () => {
+    it("calls createProfile with the user record", async () => {
       await useCase.execute(validCommand);
 
-      expect(authProvider.accountExistsById).toHaveBeenCalledWith(derivedId);
+      expect(userRepository.createProfile).toHaveBeenCalledWith({
+        id: derivedId,
+        fullName: "Fabio Reis",
+        email: "fabio@example.com",
+        birthDate: "1990-01-01",
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String),
+      });
     });
 
-    it("calls createAccount with plain string values", async () => {
-      await useCase.execute(validCommand);
-
-      expect(authProvider.createAccount).toHaveBeenCalledWith(
-        derivedId,
-        "fabio@example.com",
-        "P@ssw0rd1",
-      );
-    });
-
-    it("calls save after createAccount", async () => {
+    it("calls createProfile after createAccount", async () => {
       const order: string[] = [];
-      authProvider.createAccount.mockImplementation(async () => { order.push("createAccount"); });
-      userRepository.save.mockImplementation(async () => { order.push("save"); });
+      authProvider.createAccount.mockImplementation(async () => {
+        order.push("createAccount");
+        return "created";
+      });
+      userRepository.createProfile.mockImplementation(async () => {
+        order.push("createProfile");
+        return "created";
+      });
 
       await useCase.execute(validCommand);
 
-      expect(order).toEqual(["createAccount", "save"]);
+      expect(order).toEqual(["createAccount", "createProfile"]);
     });
   });
 
@@ -127,10 +130,8 @@ describe("RegisterUserUseCase", () => {
 
     it("trims whitespace from fullName", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
-      authProvider.accountExistsById.mockResolvedValue(false);
-      authProvider.createAccount.mockResolvedValue(undefined);
-      userRepository.save.mockResolvedValue(undefined);
+      authProvider.createAccount.mockResolvedValue("created");
+      userRepository.createProfile.mockResolvedValue("created");
 
       await expect(
         useCase.execute({ ...validCommand, fullName: "  Fabio Reis  " }),
@@ -139,28 +140,23 @@ describe("RegisterUserUseCase", () => {
 
     it("trims whitespace from birthDate", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
-      authProvider.accountExistsById.mockResolvedValue(false);
-      authProvider.createAccount.mockResolvedValue(undefined);
-      userRepository.save.mockResolvedValue(undefined);
+      authProvider.createAccount.mockResolvedValue("created");
+      userRepository.createProfile.mockResolvedValue("created");
 
       await expect(
         useCase.execute({ ...validCommand, birthDate: "  1990-01-01  " }),
       ).resolves.toBeDefined();
     });
 
-    it("throws when user is underage without calling any auth port", async () => {
+    it("throws when user is underage without calling any port", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
 
       await expect(
         useCase.execute({ ...validCommand, birthDate: "2020-01-01" }),
       ).rejects.toThrow(UnderageUserError);
 
-      expect(authProvider.accountExistsById).not.toHaveBeenCalled();
       expect(authProvider.createAccount).not.toHaveBeenCalled();
-      expect(authProvider.updatePassword).not.toHaveBeenCalled();
-      expect(userRepository.save).not.toHaveBeenCalled();
+      expect(userRepository.createProfile).not.toHaveBeenCalled();
     });
   });
 
@@ -169,71 +165,28 @@ describe("RegisterUserUseCase", () => {
       userIdDeriver.derive.mockResolvedValue("");
 
       await expect(useCase.execute(validCommand)).rejects.toThrow(TypeError);
-      expect(userRepository.existsById).not.toHaveBeenCalled();
+      expect(authProvider.createAccount).not.toHaveBeenCalled();
     });
 
     it("throws TypeError when deriver returns a whitespace-only string", async () => {
       userIdDeriver.derive.mockResolvedValue("   ");
 
       await expect(useCase.execute(validCommand)).rejects.toThrow(TypeError);
-      expect(userRepository.existsById).not.toHaveBeenCalled();
+      expect(authProvider.createAccount).not.toHaveBeenCalled();
     });
   });
 
-  describe("email already registered", () => {
+  describe("resume path (auth account exists, profile does not)", () => {
     beforeEach(() => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(true);
+      authProvider.createAccount.mockResolvedValue("email-already-exists");
+      userRepository.createProfile.mockResolvedValue("created");
     });
 
-    it("throws EmailAlreadyRegisteredError", async () => {
-      await expect(useCase.execute(validCommand)).rejects.toThrow(
-        EmailAlreadyRegisteredError,
-      );
-    });
-
-    it("does not call the auth provider or save", async () => {
-      await expect(useCase.execute(validCommand)).rejects.toThrow();
-
-      expect(authProvider.accountExistsById).not.toHaveBeenCalled();
-      expect(authProvider.createAccount).not.toHaveBeenCalled();
-      expect(userRepository.save).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("recovery path (auth exists, db does not)", () => {
-    beforeEach(() => {
-      userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
-      authProvider.accountExistsById.mockResolvedValue(true);
-      authProvider.updatePassword.mockResolvedValue(undefined);
-      userRepository.save.mockResolvedValue(undefined);
-    });
-
-    it("skips createAccount and completes the db write", async () => {
+    it("continues past the existing auth account and creates the profile", async () => {
       await useCase.execute(validCommand);
 
-      expect(authProvider.createAccount).not.toHaveBeenCalled();
-      expect(userRepository.save).toHaveBeenCalledTimes(1);
-    });
-
-    it("updates the password with the plain string value", async () => {
-      await useCase.execute(validCommand);
-
-      expect(authProvider.updatePassword).toHaveBeenCalledWith(
-        derivedId,
-        "P@ssw0rd1",
-      );
-    });
-
-    it("updates the password before saving to db", async () => {
-      const order: string[] = [];
-      authProvider.updatePassword.mockImplementation(async () => { order.push("updatePassword"); });
-      userRepository.save.mockImplementation(async () => { order.push("save"); });
-
-      await useCase.execute(validCommand);
-
-      expect(order).toEqual(["updatePassword", "save"]);
+      expect(userRepository.createProfile).toHaveBeenCalledTimes(1);
     });
 
     it("returns the derived id", async () => {
@@ -241,36 +194,47 @@ describe("RegisterUserUseCase", () => {
 
       expect(id).toBe(derivedId);
     });
+  });
 
-    it("throws and does not call save when updatePassword fails", async () => {
-      authProvider.updatePassword.mockRejectedValue(new Error("Auth unavailable"));
+  describe("email already registered (profile exists)", () => {
+    beforeEach(() => {
+      userIdDeriver.derive.mockResolvedValue(derivedId);
+      userRepository.createProfile.mockResolvedValue("already-exists");
+    });
 
-      await expect(useCase.execute(validCommand)).rejects.toThrow("Auth unavailable");
+    it("throws EmailAlreadyRegisteredError when the auth account was just created", async () => {
+      authProvider.createAccount.mockResolvedValue("created");
 
-      expect(userRepository.save).not.toHaveBeenCalled();
+      await expect(useCase.execute(validCommand)).rejects.toThrow(
+        EmailAlreadyRegisteredError,
+      );
+    });
+
+    it("throws EmailAlreadyRegisteredError when the auth account already existed", async () => {
+      authProvider.createAccount.mockResolvedValue("email-already-exists");
+
+      await expect(useCase.execute(validCommand)).rejects.toThrow(
+        EmailAlreadyRegisteredError,
+      );
     });
   });
 
   describe("auth provider failure", () => {
-    it("throws and does not call save when createAccount fails", async () => {
+    it("throws and does not call createProfile when createAccount fails", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
-      authProvider.accountExistsById.mockResolvedValue(false);
       authProvider.createAccount.mockRejectedValue(new Error("Auth unavailable"));
 
       await expect(useCase.execute(validCommand)).rejects.toThrow("Auth unavailable");
 
-      expect(userRepository.save).not.toHaveBeenCalled();
+      expect(userRepository.createProfile).not.toHaveBeenCalled();
     });
   });
 
   describe("repository failure", () => {
-    it("throws when save fails", async () => {
+    it("throws when createProfile fails", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      userRepository.existsById.mockResolvedValue(false);
-      authProvider.accountExistsById.mockResolvedValue(false);
-      authProvider.createAccount.mockResolvedValue(undefined);
-      userRepository.save.mockRejectedValue(new Error("DB unavailable"));
+      authProvider.createAccount.mockResolvedValue("created");
+      userRepository.createProfile.mockRejectedValue(new Error("DB unavailable"));
 
       await expect(useCase.execute(validCommand)).rejects.toThrow("DB unavailable");
     });

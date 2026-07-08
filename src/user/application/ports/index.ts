@@ -1,2 +1,2 @@
-export type { UserRepositoryPort, UserRecord } from "./user-repository.port.js";
-export type { AuthProviderPort } from "./auth-provider.port.js";
+export type { UserRepositoryPort, UserRecord, CreateProfileResult } from "./user-repository.port.js";
+export type { AuthProviderPort, CreateAccountResult } from "./auth-provider.port.js";
