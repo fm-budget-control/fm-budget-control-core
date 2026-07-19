@@ -38,7 +38,7 @@ describe("RegisterUserUseCase", () => {
   describe("happy path", () => {
     beforeEach(() => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      authProvider.createAccount.mockResolvedValue("created");
+      authProvider.createAccount.mockResolvedValue({ status: "created", uid: derivedId });
       userRepository.createProfile.mockResolvedValue("created");
     });
 
@@ -82,7 +82,7 @@ describe("RegisterUserUseCase", () => {
       const order: string[] = [];
       authProvider.createAccount.mockImplementation(async () => {
         order.push("createAccount");
-        return "created";
+        return { status: "created", uid: derivedId };
       });
       userRepository.createProfile.mockImplementation(async () => {
         order.push("createProfile");
@@ -130,7 +130,7 @@ describe("RegisterUserUseCase", () => {
 
     it("trims whitespace from fullName", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      authProvider.createAccount.mockResolvedValue("created");
+      authProvider.createAccount.mockResolvedValue({ status: "created", uid: derivedId });
       userRepository.createProfile.mockResolvedValue("created");
 
       await expect(
@@ -140,7 +140,7 @@ describe("RegisterUserUseCase", () => {
 
     it("trims whitespace from birthDate", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      authProvider.createAccount.mockResolvedValue("created");
+      authProvider.createAccount.mockResolvedValue({ status: "created", uid: derivedId });
       userRepository.createProfile.mockResolvedValue("created");
 
       await expect(
@@ -179,7 +179,10 @@ describe("RegisterUserUseCase", () => {
   describe("resume path (auth account exists, profile does not)", () => {
     beforeEach(() => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      authProvider.createAccount.mockResolvedValue("email-already-exists");
+      authProvider.createAccount.mockResolvedValue({
+        status: "email-already-exists",
+        uid: derivedId,
+      });
       userRepository.createProfile.mockResolvedValue("created");
     });
 
@@ -194,6 +197,30 @@ describe("RegisterUserUseCase", () => {
 
       expect(id).toBe(derivedId);
     });
+
+    it("creates the profile under the existing account's uid when it differs from the derived id", async () => {
+      authProvider.createAccount.mockResolvedValue({
+        status: "email-already-exists",
+        uid: "legacy-uid",
+      });
+
+      await useCase.execute(validCommand);
+
+      expect(userRepository.createProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "legacy-uid" }),
+      );
+    });
+
+    it("returns the existing account's uid when it differs from the derived id", async () => {
+      authProvider.createAccount.mockResolvedValue({
+        status: "email-already-exists",
+        uid: "legacy-uid",
+      });
+
+      const id = await useCase.execute(validCommand);
+
+      expect(id).toBe("legacy-uid");
+    });
   });
 
   describe("email already registered (profile exists)", () => {
@@ -203,7 +230,7 @@ describe("RegisterUserUseCase", () => {
     });
 
     it("throws EmailAlreadyRegisteredError when the auth account was just created", async () => {
-      authProvider.createAccount.mockResolvedValue("created");
+      authProvider.createAccount.mockResolvedValue({ status: "created", uid: derivedId });
 
       await expect(useCase.execute(validCommand)).rejects.toThrow(
         EmailAlreadyRegisteredError,
@@ -211,7 +238,21 @@ describe("RegisterUserUseCase", () => {
     });
 
     it("throws EmailAlreadyRegisteredError when the auth account already existed", async () => {
-      authProvider.createAccount.mockResolvedValue("email-already-exists");
+      authProvider.createAccount.mockResolvedValue({
+        status: "email-already-exists",
+        uid: derivedId,
+      });
+
+      await expect(useCase.execute(validCommand)).rejects.toThrow(
+        EmailAlreadyRegisteredError,
+      );
+    });
+
+    it("throws EmailAlreadyRegisteredError when the profile already exists under the existing account's uid", async () => {
+      authProvider.createAccount.mockResolvedValue({
+        status: "email-already-exists",
+        uid: "legacy-uid",
+      });
 
       await expect(useCase.execute(validCommand)).rejects.toThrow(
         EmailAlreadyRegisteredError,
@@ -233,7 +274,7 @@ describe("RegisterUserUseCase", () => {
   describe("repository failure", () => {
     it("throws when createProfile fails", async () => {
       userIdDeriver.derive.mockResolvedValue(derivedId);
-      authProvider.createAccount.mockResolvedValue("created");
+      authProvider.createAccount.mockResolvedValue({ status: "created", uid: derivedId });
       userRepository.createProfile.mockRejectedValue(new Error("DB unavailable"));
 
       await expect(useCase.execute(validCommand)).rejects.toThrow("DB unavailable");
