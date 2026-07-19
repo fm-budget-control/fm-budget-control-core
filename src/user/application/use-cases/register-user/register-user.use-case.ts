@@ -41,17 +41,23 @@ export class RegisterUserUseCase {
       updatedAt: now,
     });
 
-    // "email-already-exists" means a previous attempt created the auth
-    // account but not the profile — resume by creating the profile.
-    await this.authProvider.createAccount({
+    // The derived id only mints genuinely NEW accounts. "email-already-exists"
+    // means the email already owns an auth account (a previous attempt that
+    // died before creating the profile, or an imported/legacy account); that
+    // account's uid is the source of truth, so the profile is created under it
+    // and it is the id returned to the caller.
+    const account = await this.authProvider.createAccount({
       id: user.id.value,
       email: user.email.value,
       password: password.revealForHashing(),
       displayName: user.fullName.value,
     });
 
+    // account.uid is adopted as-is, without Id value-object validation: ids
+    // owned by the auth provider (imported/legacy accounts) are not
+    // necessarily in the derived-id format.
     const profileResult = await this.userRepository.createProfile({
-      id: user.id.value,
+      id: account.uid,
       fullName: user.fullName.value,
       email: user.email.value,
       birthDate: user.birthDate.value,
@@ -63,6 +69,6 @@ export class RegisterUserUseCase {
       throw new EmailAlreadyRegisteredError();
     }
 
-    return user.id.value;
+    return account.uid;
   }
 }
