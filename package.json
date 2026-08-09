@@ -34,6 +34,9 @@
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
     "test:types": "tsc --project tsconfig.type-tests.json --noEmit && echo \"Type specs passed\"",
+    "api:report": "node scripts/api-surface.mjs",
+    "api:check": "node scripts/api-surface.mjs --check",
+    "verify:artifact": "node scripts/verify-artifact.mjs",
     "prepare": "husky || true"
   },
   "repository": {
