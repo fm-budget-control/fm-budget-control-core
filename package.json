@@ -1,11 +1,16 @@
 {
   "name": "@fm-budget-control/fm-budget-control-core",
   "version": "1.0.0",
-  "description": "Hexagonal architecture domain primitives for fm-budget-control",
+  "description": "Hexagonal architecture use cases and ports for fm-budget-control",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md",
+    "SECURITY.md"
   ],
   "exports": {
     "./user/application": {
@@ -19,7 +24,8 @@
     "./kernel/ports": {
       "types": "./dist/kernel/application/ports/index.d.ts",
       "import": "./dist/kernel/application/ports/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json && publint",
@@ -28,7 +34,7 @@
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
     "test:types": "tsc --project tsconfig.type-tests.json --noEmit && echo \"Type specs passed\"",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "repository": {
     "type": "git",
@@ -49,6 +55,7 @@
     "@types/node": "^26.0.0",
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.61.0",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "eslint": "^10.5.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",

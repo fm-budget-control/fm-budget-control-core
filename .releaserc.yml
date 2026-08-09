@@ -2,11 +2,38 @@ branches:
   - main
 
 plugins:
-  - "@semantic-release/commit-analyzer"
-  - "@semantic-release/release-notes-generator"
-  - - "@semantic-release/changelog"
-    - changelogFile: CHANGELOG.md
+  # The `conventionalcommits` preset is required, not cosmetic. The default
+  # `angular` preset's header pattern does not admit `!`, so `feat!:` commits
+  # are parsed with no type at all and contribute NOTHING to version selection.
+  # That is how the breaking port refactor in #97 shipped as 1.6.0 (a minor)
+  # instead of 2.0.0. Both plugins must use the same preset.
+  - - "@semantic-release/commit-analyzer"
+    - preset: conventionalcommits
+  - - "@semantic-release/release-notes-generator"
+    - preset: conventionalcommits
   - - "@semantic-release/npm"
     - npmPublish: true
       pkgRoot: .
+  # Generates the GitHub Release notes. These are the authoritative per-release
+  # record — see the note in CHANGELOG.md.
   - "@semantic-release/github"
+
+# Deliberately NOT used: @semantic-release/changelog and @semantic-release/git.
+#
+# The `main` ruleset requires a pull request and has no bypass actor that the
+# workflow could use (GitHub Actions is first-party and cannot be an Integration
+# bypass actor; the only installed apps are SonarCloud and Codex). So
+# @semantic-release/git cannot push the release commit — it would fail the
+# release during `prepare`, before anything is published.
+#
+# @semantic-release/changelog is omitted for a subtler reason: it builds each
+# release's changelog by reading the file from the git checkout and prepending
+# to it. Without a commit-back step, every CI run starts from the same committed
+# base, so each published CHANGELOG.md would contain only the newest release and
+# silently drop the ones before it. A hand-maintained changelog is correct;
+# a half-automated one is actively wrong.
+#
+# To automate this properly, register a GitHub App for the org with
+# `contents: write`, add it as an Integration bypass actor on the ruleset, and
+# mint a token with actions/create-github-app-token in release.yml. Then both
+# plugins can be restored.
