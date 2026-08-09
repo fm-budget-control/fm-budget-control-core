@@ -1,0 +1,73 @@
+name: PR Title
+
+run-name: "PR Title — #${{ github.event.pull_request.number }}"
+
+# Why this exists
+# ---------------
+# `main` is squash-merged, and squash_merge_commit_title is COMMIT_OR_PR_TITLE:
+# a PR with ONE commit takes that commit's subject, a PR with TWO OR MORE takes
+# the PR TITLE. So for most PRs the PR title becomes the commit message on main,
+# and that message is what semantic-release reads to choose the next version.
+#
+# An unvalidated title therefore silently decides the release. PR #111 was
+# titled "Chore/110 claude review immediate" (auto-derived from the branch name
+# by issue-branch.yml) while its commits were `feat:`. semantic-release saw no
+# conventional type on main and released nothing.
+#
+# This validates the title with the SAME commitlint config used for commits, so
+# the two can never disagree.
+#
+# `edited` is essential: without it, correcting a rejected title would not
+# re-run this check and the PR would stay blocked.
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-title:
+    name: Conventional Commit Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The title is untrusted input, so it is passed through the environment
+      # rather than interpolated into the shell.
+      - name: Validate PR title against .commitlintrc.yml
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "Title: $PR_TITLE"
+          if ! printf '%s\n' "$PR_TITLE" | npx --no -- commitlint; then
+            echo ""
+            echo "::error::PR title is not a Conventional Commit."
+            echo "This title becomes the commit message on main and decides the"
+            echo "released version. Examples:"
+            echo "  feat: add budget category port      -> minor"
+            echo "  fix: reject empty currency code     -> patch"
+            echo "  feat!: rename AuthProviderPort      -> major"
+            echo "  docs: expand readme quick start     -> no release"
+            exit 1
+          fi
